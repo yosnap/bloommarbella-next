@@ -6,6 +6,8 @@ import { Product, ProductCardProps } from '@/types/product'
 import { getDisplayPrice, formatPrice } from '@/lib/pricing'
 import { usePricing } from '@/contexts/pricing-context'
 import { useFavorites } from '@/hooks/use-favorites'
+import { useState, useEffect } from 'react'
+import { isNewProduct } from '@/lib/utils/badge-utils'
 
 export function ProductCard({ 
   product, 
@@ -16,14 +18,35 @@ export function ProductCard({
   showAddToCart = true,
   showDiscount = true,
   showRibbons = true,
-  className = ''
+  className = '',
+  priority = false
 }: ProductCardProps) {
   const { showVatForAssociate } = usePricing()
   const { toggleFavorite, isFavorite } = useFavorites()
   const isAssociate = userRole === 'ASSOCIATE'
+  const [newBadgeDays, setNewBadgeDays] = useState(30)
+  
+  // Obtener configuración de badge "Nuevo"
+  useEffect(() => {
+    const getConfig = async () => {
+      try {
+        const response = await fetch('/api/admin/configuration')
+        if (response.ok) {
+          const data = await response.json()
+          setNewBadgeDays(data.data?.newBadgeDays || 30)
+        }
+      } catch (error) {
+        console.error('Error getting badge config:', error)
+      }
+    }
+    getConfig()
+  }, [])
   
   // Obtener precios calculados según el rol del usuario y preferencia de IVA
   const pricing = getDisplayPrice(product.basePrice, userRole, undefined, showVatForAssociate)
+  
+  // Verificar si el producto es nuevo
+  const isNew = isNewProduct(product.sysmodified, newBadgeDays)
   
   const gridClass = viewMode === 'grid' 
     ? 'bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow'
@@ -70,6 +93,7 @@ export function ProductCard({
             width={viewMode === 'grid' ? 300 : 128}
             height={viewMode === 'grid' ? 400 : 172}
             className={imageClass}
+            priority={priority}
             onError={(e) => {
               // Fallback a imagen por defecto si falla
               const target = e.target as HTMLImageElement;
@@ -84,6 +108,7 @@ export function ProductCard({
               width={viewMode === 'grid' ? 300 : 128}
               height={viewMode === 'grid' ? 400 : 172}
               className={imageClass}
+              priority={priority}
             />
           </div>
         )}
@@ -91,6 +116,12 @@ export function ProductCard({
         {/* Ribbons */}
         {showRibbons && (
           <>
+            {/* Badge "Nuevo" - DESACTIVADO temporalmente hasta que se corrija sysmodified */}
+            {/* {isNew && (
+              <div className="absolute top-2 left-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium z-10">
+                Nuevo
+              </div>
+            )} */}
             {product.stockStatus === 'low_stock' && (
               <div className="absolute top-2 right-2 bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-medium">
                 Stock limitado
@@ -102,7 +133,7 @@ export function ProductCard({
               </div>
             )}
             {product.isRealTimeData && (
-              <div className="absolute top-2 left-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+              <div className="absolute top-2 left-2 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-medium">
                 ✓ Actualizado
               </div>
             )}

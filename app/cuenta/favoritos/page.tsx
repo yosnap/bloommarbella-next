@@ -114,13 +114,14 @@ export default function FavoritosPage() {
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {favorites.map(favorite => (
+                {favorites.map((favorite, index) => (
                   <div key={favorite.id} className="relative">
                     <ProductCard
                       product={favorite.product}
                       userRole={userRole}
                       onAddToCart={handleAddToCart}
                       viewMode="grid"
+                      priority={index < 3}
                     />
                     <button
                       onClick={() => handleRemoveFromFavorites(favorite.product.id, favorite.product.name)}

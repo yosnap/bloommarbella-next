@@ -26,7 +26,8 @@ export async function GET() {
             'min_stock_alert',
             'max_stock_alert',
             'enable_cache',
-            'cache_time'
+            'cache_time',
+            'new_badge_days'
           ]
         }
       }
@@ -40,7 +41,8 @@ export async function GET() {
       minStockAlert: 5,
       maxStockAlert: 100,
       enableCache: true,
-      cacheTime: 30
+      cacheTime: 30,
+      newBadgeDays: 30
     }
 
     configurations.forEach(item => {
@@ -65,6 +67,9 @@ export async function GET() {
           break
         case 'cache_time':
           config.cacheTime = parseInt(item.value?.toString() || '30') || 30
+          break
+        case 'new_badge_days':
+          config.newBadgeDays = parseInt(item.value?.toString() || '30') || 30
           break
       }
     })
@@ -105,7 +110,8 @@ export async function POST(request: NextRequest) {
       minStockAlert,
       maxStockAlert,
       enableCache,
-      cacheTime
+      cacheTime,
+      newBadgeDays
     } = body
 
     // Update each configuration value
@@ -116,7 +122,8 @@ export async function POST(request: NextRequest) {
       { key: 'min_stock_alert', value: minStockAlert.toString() },
       { key: 'max_stock_alert', value: maxStockAlert.toString() },
       { key: 'enable_cache', value: enableCache.toString() },
-      { key: 'cache_time', value: cacheTime.toString() }
+      { key: 'cache_time', value: cacheTime.toString() },
+      { key: 'new_badge_days', value: newBadgeDays.toString() }
     ]
 
     for (const config of configUpdates) {
@@ -158,7 +165,8 @@ function getConfigDescription(key: string): string {
     'min_stock_alert': 'Cantidad mínima de stock para alertas',
     'max_stock_alert': 'Cantidad máxima de stock para alertas',
     'enable_cache': 'Habilitar cache para mejorar rendimiento',
-    'cache_time': 'Tiempo de cache en minutos'
+    'cache_time': 'Tiempo de cache en minutos',
+    'new_badge_days': 'Días mínimos para mostrar badge "Nuevo" en productos'
   }
   return descriptions[key] || 'Configuración del sistema'
 }

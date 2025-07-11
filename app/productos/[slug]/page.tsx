@@ -10,6 +10,9 @@ import { translateProductTagsClient, commonTagTranslationsClient } from '@/lib/t
 import { useUserPricing } from '@/hooks/use-user-pricing'
 import { getDisplayPrice, formatPrice } from '@/lib/pricing'
 import { useFavorites } from '@/hooks/use-favorites'
+import { ProductBreadcrumbs } from '@/components/products/product-breadcrumbs'
+import { useState as useStateHook, useEffect as useEffectHook } from 'react'
+import { isNewProduct } from '@/lib/utils/badge-utils'
 
 interface Product {
   id: string
@@ -73,6 +76,7 @@ export default function ProductPage() {
   const [selectedImage, setSelectedImage] = useState(0)
   const [quantity, setQuantity] = useState(1)
   const [translatedTags, setTranslatedTags] = useState<Array<{ code: string; value: string }>>([])
+  const [newBadgeDays, setNewBadgeDays] = useStateHook(30)
   const { userRole, isAssociate, showVatForAssociate } = useUserPricing()
   const { toggleFavorite, isFavorite } = useFavorites()
 
@@ -81,6 +85,22 @@ export default function ProductPage() {
       fetchProduct()
     }
   }, [slugParam])
+
+  // Obtener configuración de badge "Nuevo"
+  useEffectHook(() => {
+    const getConfig = async () => {
+      try {
+        const response = await fetch('/api/admin/configuration')
+        if (response.ok) {
+          const data = await response.json()
+          setNewBadgeDays(data.data?.newBadgeDays || 30)
+        }
+      } catch (error) {
+        console.error('Error getting badge config:', error)
+      }
+    }
+    getConfig()
+  }, [])
 
   // Traducir tags cuando el producto se carga
   useEffect(() => {
@@ -156,23 +176,18 @@ export default function ProductPage() {
   }
 
   const hasImages = product.images && product.images.length > 0
+  const isNew = isNewProduct(product.sysmodified, newBadgeDays)
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
       
-      {/* Breadcrumb */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <button
-            onClick={() => router.push('/catalogo')}
-            className="flex items-center gap-2 text-[#183a1d] hover:text-[#2a5530] transition-colors"
-          >
-            <ArrowLeft size={20} />
-            Volver al catálogo
-          </button>
-        </div>
-      </div>
+      {/* Breadcrumbs */}
+      <ProductBreadcrumbs 
+        productName={product.name}
+        category={product.category}
+        subcategory={product.subcategory}
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -192,6 +207,12 @@ export default function ProductPage() {
                       target.src = 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&auto=format&fit=crop&q=80';
                     }}
                   />
+                  {/* Badge "Nuevo" - DESACTIVADO temporalmente hasta que se corrija sysmodified */}
+                  {/* {isNew && (
+                    <div className="absolute top-4 left-4 bg-green-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg z-10">
+                      Nuevo
+                    </div>
+                  )} */}
                   {/* Ribbon de oferta */}
                   {(product.isOffer || product.specifications?.isOffer) && (
                     <div className="absolute top-4 right-4 bg-red-600 text-white px-4 py-2 rounded-full text-sm font-bold animate-pulse shadow-lg">

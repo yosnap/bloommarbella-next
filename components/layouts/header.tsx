@@ -42,49 +42,54 @@ const navigation = [
   },
   {
     name: 'Plantas',
-    href: '/shop/plantas',
+    href: '/catalogo?categories=Planten',
     icon: LeafIcon,
     featured: true,
     children: [
       {
-        name: 'Plantas de Interior',
-        href: '/shop/plantas/interior',
+        name: 'Hidrocultivos',
+        href: '/catalogo?categories=Hydroculture',
         icon: PlantPotIcon,
-        description: 'Perfectas para decorar tu hogar'
+        description: 'Plantas en sistemas hidropónicos'
       },
       {
-        name: 'Plantas de Exterior',
-        href: '/shop/plantas/exterior',
+        name: 'Cultivo en Tierra',
+        href: '/catalogo?categories=Soilculture',
         icon: TreeIcon,
-        description: 'Para jardines y terrazas'
+        description: 'Plantas tradicionales en sustrato'
       },
       {
         name: 'Plantas Artificiales',
-        href: '/shop/plantas/artificiales',
+        href: '/catalogo?categories=Artificial%20',
         icon: FlowerIcon,
         description: 'Belleza sin mantenimiento'
       }
     ]
   },
   {
-    name: 'Macetas',
-    href: '/shop/macetas',
+    name: 'Jardineras',
+    href: '/catalogo?categories=Jardineras',
     icon: PlantPotIcon,
     children: [
       {
-        name: 'Macetas de Cerámica',
-        href: '/shop/macetas/ceramica',
-        description: 'Elegantes y duraderas'
+        name: 'Equipos y Accesorios',
+        href: '/catalogo?categories=Equipments%20and%20accessories',
+        description: 'Herramientas y accesorios para jardinería'
       },
       {
-        name: 'Macetas de Fibra',
-        href: '/shop/macetas/fibra',
-        description: 'Ligeras y resistentes'
+        name: 'Decoración',
+        href: '/catalogo?categories=Decoration',
+        description: 'Elementos decorativos para jardín'
       },
       {
-        name: 'Macetas Decorativas',
-        href: '/shop/macetas/decorativas',
-        description: 'Diseños únicos'
+        name: 'Paredes Verdes',
+        href: '/catalogo?categories=Green%20walls',
+        description: 'Sistemas de jardines verticales'
+      },
+      {
+        name: 'Conceptos Todo en Uno',
+        href: '/catalogo?categories=All-in-1%20concepts',
+        description: 'Soluciones completas de plantas y macetas'
       }
     ]
   },

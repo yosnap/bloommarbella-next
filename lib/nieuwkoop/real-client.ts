@@ -211,9 +211,10 @@ export class NieuwkoopRealClient {
     }
     
     if (params.itemCode) {
-      queryParams.Itemcode = params.itemCode
+      queryParams.itemCode = params.itemCode
     }
 
+    console.log('🔍 Nieuwkoop API request:', queryParams)
     const response = await this.request<NieuwkoopProduct[]>('/items', queryParams)
     
     if (response.success && response.data) {

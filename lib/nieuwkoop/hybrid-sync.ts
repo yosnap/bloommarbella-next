@@ -45,6 +45,7 @@ export class HybridSync {
         nieuwkoopId: baseProduct.nieuwkoopId,
         slug: baseProduct.slug,
         specifications: baseProduct.specifications,
+        sysmodified: baseProduct.sysmodified,
         
         // Datos en tiempo real de Nieuwkoop
         currentPrice: realtimeData.price,
@@ -135,6 +136,7 @@ export class HybridSync {
   async getProductsWithRealtimeData(
     filters: {
       category?: string
+      categories?: string[]
       search?: string
       page?: number
       limit?: number
@@ -142,7 +144,7 @@ export class HybridSync {
       sortOrder?: string
     } = {}
   ) {
-    const { category, search, page = 1, limit = 20, sortBy = 'name', sortOrder = 'asc' } = filters
+    const { category, categories, search, page = 1, limit = 20, sortBy = 'name', sortOrder = 'asc' } = filters
 
     // 1. Obtener productos base de MongoDB
     const where: any = { active: true }
@@ -151,11 +153,33 @@ export class HybridSync {
       where.category = category
     }
     
-    if (search) {
+    // Support for multiple categories (includes subcategories)
+    if (categories && categories.length > 0) {
       where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
+        { category: { in: categories } },
+        { subcategory: { in: categories } }
       ]
+    }
+    
+    if (search) {
+      const searchCondition = {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+          { sku: { contains: search, mode: 'insensitive' } }
+        ]
+      }
+      
+      if (where.OR) {
+        // Combine with category filter
+        where.AND = [
+          { OR: where.OR },
+          searchCondition
+        ]
+        delete where.OR
+      } else {
+        where.OR = searchCondition.OR
+      }
     }
 
     // Configurar ordenamiento
@@ -374,6 +398,7 @@ export class HybridSync {
                 images,
                 specifications,
                 active: nieuwkoopProduct.ShowOnWebsite && nieuwkoopProduct.ItemStatus === 'A',
+                sysmodified: nieuwkoopProduct.Sysmodified,
                 updatedAt: new Date()
               }
             })
@@ -403,6 +428,7 @@ export class HybridSync {
                 images,
                 specifications,
                 active: nieuwkoopProduct.ShowOnWebsite && nieuwkoopProduct.ItemStatus === 'A',
+                sysmodified: nieuwkoopProduct.Sysmodified,
                 createdAt: new Date(),
                 updatedAt: new Date()
               }

@@ -3,81 +3,94 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
+    // Get hidden categories from configuration
+    const hiddenCategoriesConfig = await prisma.configuration.findUnique({
+      where: { key: 'hidden_categories' }
+    })
+    const hiddenCategories = hiddenCategoriesConfig?.value as string[] || []
+
     // Get unique categories and subcategories from products
     const categoriesData = await prisma.product.groupBy({
       by: ['category', 'subcategory'],
       where: {
-        active: true,
-        stock: { gt: 0 }
+        active: true
+        // Temporarily remove stock filter to see all products
       },
       _count: {
         _all: true
       },
       orderBy: {
-        category: 'asc'
+        subcategory: 'asc'
       }
     })
 
-    // Group by category
-    const categories: Record<string, {
+    // Group by category (MainGroupDescription_EN) - these become our main "Grupos"
+    const grupos: Record<string, {
       name: string
       count: number
-      subcategories: Array<{
+      categorias: Array<{
         name: string
         count: number
       }>
     }> = {}
 
     categoriesData.forEach(item => {
-      if (!categories[item.category]) {
-        categories[item.category] = {
+      // Skip items without subcategory
+      if (!item.subcategory) return
+
+      // Skip hidden categories and subcategories
+      if (hiddenCategories.includes(item.category) || hiddenCategories.includes(item.subcategory)) {
+        return
+      }
+
+      if (!grupos[item.category]) {
+        grupos[item.category] = {
           name: item.category,
           count: 0,
-          subcategories: []
+          categorias: []
         }
       }
 
-      categories[item.category].count += item._count._all
+      grupos[item.category].count += item._count._all
 
-      if (item.subcategory) {
-        const existingSubcat = categories[item.category].subcategories
-          .find(sub => sub.name === item.subcategory)
+      // Add category (original subcategory) if not already present
+      const existingCategoria = grupos[item.category].categorias
+        .find(cat => cat.name === item.subcategory)
 
-        if (existingSubcat) {
-          existingSubcat.count += item._count._all
-        } else {
-          categories[item.category].subcategories.push({
-            name: item.subcategory,
-            count: item._count._all
-          })
-        }
+      if (existingCategoria) {
+        existingCategoria.count += item._count._all
+      } else {
+        grupos[item.category].categorias.push({
+          name: item.subcategory,
+          count: item._count._all
+        })
       }
     })
 
-    // Sort subcategories
-    Object.values(categories).forEach(category => {
-      category.subcategories.sort((a, b) => a.name.localeCompare(b.name))
+    // Sort categorias within each grupo
+    Object.values(grupos).forEach(grupo => {
+      grupo.categorias.sort((a, b) => a.name.localeCompare(b.name))
     })
 
     // Convert to array and add Spanish translations
-    const categoriesArray = Object.values(categories).map(category => ({
-      ...category,
-      slug: category.name.toLowerCase().replace(/\s+/g, '-'),
-      displayName: getCategoryDisplayName(category.name),
-      subcategories: category.subcategories.map(sub => ({
-        ...sub,
-        slug: sub.name.toLowerCase().replace(/\s+/g, '-'),
-        displayName: getSubcategoryDisplayName(sub.name)
+    const gruposArray = Object.values(grupos).map(grupo => ({
+      ...grupo,
+      slug: grupo.name.toLowerCase().replace(/\s+/g, '-'),
+      displayName: getGrupoDisplayName(grupo.name),
+      categorias: grupo.categorias.map(categoria => ({
+        ...categoria,
+        slug: categoria.name.toLowerCase().replace(/\s+/g, '-'),
+        displayName: getCategoriaDisplayName(categoria.name)
       }))
     }))
 
     return NextResponse.json({
       success: true,
-      data: categoriesArray,
+      data: gruposArray,
       meta: {
-        totalCategories: categoriesArray.length,
-        totalSubcategories: categoriesArray.reduce((sum, cat) => sum + cat.subcategories.length, 0),
-        totalProducts: categoriesArray.reduce((sum, cat) => sum + cat.count, 0)
+        totalGrupos: gruposArray.length,
+        totalCategorias: gruposArray.reduce((sum, grupo) => sum + grupo.categorias.length, 0),
+        totalProducts: gruposArray.reduce((sum, grupo) => sum + grupo.count, 0)
       }
     })
   } catch (error: any) {
@@ -92,29 +105,38 @@ export async function GET() {
   }
 }
 
-function getCategoryDisplayName(category: string): string {
+function getGrupoDisplayName(grupo: string): string {
+  // Grupos son las categorías principales (MainGroupDescription_EN)
   const translations: Record<string, string> = {
-    'Plantas': 'Plantas',
-    'Macetas': 'Macetas y Jardineras',
-    'Jardín': 'Jardín y Exterior',
-    'Herramientas': 'Herramientas',
-    'Fertilizantes': 'Fertilizantes y Sustratos'
+    'Planten': 'Plantas',
+    'Hardware': 'Material',
+    'Potten': 'Macetas',
+    'Tuinen': 'Jardín',
+    'Decoratie': 'Decoración',
+    'Verzorging': 'Cuidado'
   }
   
-  return translations[category] || category
+  return translations[grupo] || grupo
 }
 
-function getSubcategoryDisplayName(subcategory: string): string {
+function getCategoriaDisplayName(categoria: string): string {
+  // Categorías son las subcategorías (ProductGroupDescription_EN)
+  // Basado en datos reales de la API de Nieuwkoop via /api/taxonomy
   const translations: Record<string, string> = {
-    'Interior': 'Plantas de Interior',
-    'Exterior': 'Plantas de Exterior',
-    'Suculentas': 'Suculentas y Cactus',
-    'Florales': 'Plantas Florales',
-    'Cerámica': 'Macetas de Cerámica',
-    'Fibra': 'Macetas de Fibra',
-    'Decorativas': 'Macetas Decorativas',
-    'Herramientas': 'Herramientas de Jardín'
+    // ProductGroupDescription_EN confirmados desde la API de Nieuwkoop (/api/taxonomy)
+    'All-in-1 concepts': 'Conceptos Todo en Uno', // Confirmado con SKU CC0050320
+    'Artificial ': 'Plantas Artificiales',
+    'Decoration': 'Decoración', 
+    'Documentation': 'Documentación',
+    'Equipments and accessories': 'Equipos y Accesorios',
+    'Green walls': 'Paredes Verdes',
+    'Hydroculture': 'Hidrocultivos',
+    'Moss and Mummy plants ': 'Plantas de Musgo',
+    'Nutrients and pesticide': 'Nutrientes y Pesticidas',
+    'Planters': 'Macetas y Jardineras',
+    'Soilculture': 'Cultivo en Tierra',
+    'Substrates and systems': 'Sustratos y Sistemas'
   }
   
-  return translations[subcategory] || subcategory
+  return translations[categoria] || categoria
 }

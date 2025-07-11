@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Header } from '@/components/layouts/header'
-import { Save, Settings, DollarSign, Users, Clock } from 'lucide-react'
+import { Save, Settings, DollarSign, Users, Clock, Tag } from 'lucide-react'
 
 interface Configuration {
   priceMultiplier: number
@@ -14,6 +14,7 @@ interface Configuration {
   maxStockAlert: number
   enableCache: boolean
   cacheTime: number
+  newBadgeDays: number
 }
 
 export default function ConfigurationPage() {
@@ -26,7 +27,8 @@ export default function ConfigurationPage() {
     minStockAlert: 5,
     maxStockAlert: 100,
     enableCache: true,
-    cacheTime: 30
+    cacheTime: 30,
+    newBadgeDays: 30
   })
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
@@ -247,6 +249,33 @@ export default function ConfigurationPage() {
                     disabled={!config.enableCache}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#183a1d] disabled:bg-gray-100"
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* Configuración de Badges */}
+            <div className="bg-gray-50 rounded-lg p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <Tag className="h-5 w-5 text-[#f0a04b]" />
+                <h2 className="text-lg font-semibold text-gray-900">Configuración de Badges</h2>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Días para mostrar badge "Nuevo"
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="365"
+                    value={config.newBadgeDays}
+                    onChange={(e) => handleInputChange('newBadgeDays', parseInt(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#183a1d]"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Productos dados de alta en Nieuwkoop hace menos de estos días mostrarán el badge "Nuevo"
+                  </p>
                 </div>
               </div>
             </div>

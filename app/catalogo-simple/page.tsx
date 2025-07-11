@@ -94,9 +94,10 @@ interface Product {
 interface ProductCardProps {
   product: Product
   userRole?: 'ADMIN' | 'ASSOCIATE' | 'CUSTOMER'
+  priority?: boolean
 }
 
-function ProductCard({ product, userRole }: ProductCardProps) {
+function ProductCard({ product, userRole, priority = false }: ProductCardProps) {
   const finalPrice = calculatePrice(product.basePrice, userRole)
   const discount = userRole === 'ASSOCIATE' ? 20 : 0
   
@@ -110,6 +111,7 @@ function ProductCard({ product, userRole }: ProductCardProps) {
             width={300}
             height={200}
             className="w-full h-48 object-cover"
+            priority={priority}
           />
         )}
         {product.availability === 'limited' && (
@@ -248,11 +250,12 @@ export default function CatalogoSimplePage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredProducts.map(product => (
+                {filteredProducts.map((product, index) => (
                   <ProductCard
                     key={product.id}
                     product={product}
                     userRole="CUSTOMER"
+                    priority={index < 3}
                   />
                 ))}
               </div>

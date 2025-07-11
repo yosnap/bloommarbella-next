@@ -82,6 +82,9 @@ export async function GET(
         // Dynamic images
         images: getProductImageUrls(hybridProduct.sku),
         
+        // Sysmodified field
+        sysmodified: hybridProduct.sysmodified,
+        
         // Pricing
         basePrice: hybridProduct.currentPrice,
         displayPrice,

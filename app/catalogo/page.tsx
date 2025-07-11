@@ -2,23 +2,29 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { useSearchParams } from 'next/navigation'
 import { Header } from '@/components/layouts/header'
 import { calculatePrice } from '@/lib/pricing'
 import { Search, Filter, Grid, List } from 'lucide-react'
 import { ProductCard } from '@/components/products/product-card'
 import { Product } from '@/types/product'
 import { useUserPricing } from '@/hooks/use-user-pricing'
+import { CategoryFilter } from '@/components/catalog/category-filter'
+import { ActiveFilters } from '@/components/catalog/active-filters'
+import { Breadcrumbs } from '@/components/catalog/breadcrumbs'
 
 // Interfaces y tipos ahora están en /types/product.ts
 
 export default function CatalogoPage() {
   const { data: session } = useSession()
   const { userRole } = useUserPricing()
+  const searchParams = useSearchParams()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [showFilters, setShowFilters] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
@@ -31,8 +37,6 @@ export default function CatalogoPage() {
   const [hasOffersAvailable, setHasOffersAvailable] = useState(false)
   const [itemsPerPage, setItemsPerPage] = useState(16)
   
-  const categories = Array.from(new Set(products.map(p => p.category)))
-  
   const filteredProducts = products.filter(product => product.active)
   
   const handleAddToCart = (product: Product) => {
@@ -41,7 +45,37 @@ export default function CatalogoPage() {
     alert(`Producto "${product.name}" agregado al carrito (funcionalidad pendiente)`)
   }
 
+  // Funciones para manejar filtros activos
+  const handleRemoveSearch = () => {
+    setSearchTerm('')
+    setCurrentPage(1)
+  }
+
+  const handleRemoveCategory = (category: string) => {
+    const newCategories = selectedCategories.filter(c => c !== category)
+    setSelectedCategories(newCategories)
+    setCurrentPage(1)
+  }
+
+  const handleClearAllFilters = () => {
+    setSearchTerm('')
+    setSelectedCategories([])
+    setCurrentPage(1)
+  }
+
+  // Read URL parameters on page load
   useEffect(() => {
+    const categoriesParam = searchParams.get('categories')
+    const searchParam = searchParams.get('search')
+    
+    if (categoriesParam) {
+      setSelectedCategories(categoriesParam.split(','))
+    }
+    
+    if (searchParam) {
+      setSearchTerm(searchParam)
+    }
+    
     fetchProducts(1, true)
   }, [])
   
@@ -52,7 +86,7 @@ export default function CatalogoPage() {
     }, 300)
     
     return () => clearTimeout(delayDebounce)
-  }, [searchTerm, selectedCategory, sortBy, sortOrder])
+  }, [searchTerm, selectedCategory, selectedCategories, sortBy, sortOrder])
 
   const fetchProducts = async (page = 1, resetProducts = false) => {
     try {
@@ -61,6 +95,7 @@ export default function CatalogoPage() {
         page: page.toString(),
         limit: itemsPerPage.toString(),
         ...(selectedCategory && { category: selectedCategory }),
+        ...(selectedCategories.length > 0 && { categories: selectedCategories.join(',') }),
         ...(searchTerm && { search: searchTerm }),
         sortBy: sortBy,
         sortOrder: sortOrder
@@ -154,23 +189,10 @@ export default function CatalogoPage() {
                 </div>
               </div>
               
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Categoría
-                </label>
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#183a1d] focus:border-transparent"
-                >
-                  <option value="">Todas las categorías</option>
-                  {categories.map(category => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <CategoryFilter
+                selectedCategories={selectedCategories}
+                onCategoryChange={setSelectedCategories}
+              />
               
               {session?.user?.role === 'ASSOCIATE' && (
                 <div className="bg-[#f0a04b] text-white p-3 rounded-lg text-sm">
@@ -183,6 +205,21 @@ export default function CatalogoPage() {
 
           {/* Contenido principal */}
           <div className="flex-1">
+            {/* Migas de pan */}
+            <Breadcrumbs 
+              searchTerm={searchTerm} 
+              selectedCategories={selectedCategories}
+            />
+            
+            {/* Filtros activos */}
+            <ActiveFilters
+              searchTerm={searchTerm}
+              selectedCategories={selectedCategories}
+              onRemoveSearch={handleRemoveSearch}
+              onRemoveCategory={handleRemoveCategory}
+              onClearAll={handleClearAllFilters}
+            />
+            
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
               <div>
                 <h1 className="text-3xl font-bold text-gray-800 mb-2">Catálogo de Productos</h1>
@@ -260,13 +297,14 @@ export default function CatalogoPage() {
                   ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
                   : 'space-y-4'
                 }>
-                  {filteredProducts.map(product => (
+                  {filteredProducts.map((product, index) => (
                     <ProductCard
                       key={product.id}
                       product={product}
                       userRole={userRole}
                       viewMode={viewMode}
                       onAddToCart={handleAddToCart}
+                      priority={index < 3}
                     />
                   ))}
                 </div>

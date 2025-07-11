@@ -18,13 +18,18 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100)
     const category = searchParams.get('category')
+    const categories = searchParams.get('categories')
     const search = searchParams.get('search')
     const sortBy = searchParams.get('sortBy') || 'name'
     const sortOrder = searchParams.get('sortOrder') || 'asc'
 
+    // Parse categories parameter (comma-separated list)
+    const categoryFilters = categories ? categories.split(',').map(c => c.trim()).filter(c => c) : []
+    
     // Get products with real-time data
     const result = await hybridSync.getProductsWithRealtimeData({
       category,
+      categories: categoryFilters,
       search,
       page,
       limit,
@@ -68,6 +73,7 @@ export async function GET(request: NextRequest) {
         subcategory: product.subcategory,
         images: getProductImageUrls(product.sku), // Generar URLs dinámicamente
         specifications: product.specifications,
+        sysmodified: product.sysmodified,
         
         // Pricing
         basePrice: product.currentPrice,

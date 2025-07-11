@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Languages, Save, Plus, Search, CheckCircle, AlertCircle, Table, List } from 'lucide-react'
 import { AdminHeader } from '@/components/admin/admin-header'
+import { useToast } from '@/hooks/use-toast'
 
 interface Translation {
   englishText: string
@@ -25,6 +26,7 @@ const CATEGORIES = [
 ]
 
 export default function TranslationsPage() {
+  const { success, error, warning } = useToast()
   const [selectedCategory, setSelectedCategory] = useState('categories')
   const [viewMode, setViewMode] = useState<'individual' | 'batch'>('individual')
   const [loading, setLoading] = useState(false)
@@ -115,7 +117,7 @@ export default function TranslationsPage() {
 
   const handleAddTranslation = async () => {
     if (!selectedSuggestion || !spanishTranslation) {
-      alert('Por favor complete todos los campos')
+      warning('Campos incompletos', 'Por favor complete todos los campos')
       return
     }
 
@@ -133,17 +135,18 @@ export default function TranslationsPage() {
       })
 
       if (response.ok) {
-        alert('✅ Traducción guardada correctamente')
+        success('Traducción guardada', `"${selectedSuggestion}" → "${spanishTranslation}"`)
         setSelectedSuggestion('')
         setSpanishTranslation('')
         setSearchTerm('')
         setSuggestions([])
       } else {
-        alert('❌ Error al guardar la traducción')
+        const errorData = await response.json()
+        error('Error al guardar', errorData.error || 'No se pudo guardar la traducción')
       }
-    } catch (error) {
-      console.error('Error adding translation:', error)
-      alert('❌ Error al guardar la traducción')
+    } catch (err) {
+      console.error('Error adding translation:', err)
+      error('Error de conexión', 'No se pudo conectar con el servidor')
     } finally {
       setSaving(false)
     }
@@ -166,7 +169,7 @@ export default function TranslationsPage() {
       }))
 
     if (validTranslations.length === 0) {
-      alert('❌ No hay traducciones para guardar')
+      warning('Sin traducciones', 'No hay traducciones para guardar')
       return
     }
 
@@ -183,16 +186,18 @@ export default function TranslationsPage() {
 
       if (response.ok) {
         const data = await response.json()
-        alert(`✅ ${data.message}`)
+        success('Traducciones guardadas', `${validTranslations.length} traducciones guardadas correctamente`)
         // Recargar las cadenas para actualizar el estado
         await fetchCategoryStrings()
+        // Limpiar las traducciones temporales
+        setBatchTranslations({})
       } else {
         const errorData = await response.json()
-        alert(`❌ Error: ${errorData.error}`)
+        error('Error al guardar', errorData.error || 'No se pudieron guardar las traducciones')
       }
-    } catch (error) {
-      console.error('Error saving batch translations:', error)
-      alert('❌ Error al guardar las traducciones')
+    } catch (err) {
+      console.error('Error saving batch translations:', err)
+      error('Error de conexión', 'No se pudo conectar con el servidor')
     } finally {
       setSaving(false)
     }

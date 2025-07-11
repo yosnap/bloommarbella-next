@@ -35,6 +35,7 @@ export interface Product {
   priceText: string
   originalPriceText: string | null
   isOffer?: boolean
+  sysmodified?: string | null
 }
 
 export interface ProductFilters {
@@ -61,6 +62,7 @@ export interface ProductCardProps {
   showDiscount?: boolean
   showRibbons?: boolean
   className?: string
+  priority?: boolean
 }
 
 export interface ProductsResponse {
