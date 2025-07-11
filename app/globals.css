@@ -1,0 +1,244 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Infant:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Animations for sliding banner */
+@keyframes slide-bg {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-bg {
+  animation: slide-bg 20s linear infinite;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s ease-out;
+}
+
+@layer base {
+  :root {
+    --bloom-primary: #183a1d;
+    --bloom-secondary: #f0a04b;
+    --bloom-primary-light: #245a2a;
+    --bloom-secondary-light: #f4b56f;
+    --font-cormorant: 'Cormorant Infant', serif;
+    --font-inter: 'Inter', sans-serif;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    font-family: var(--font-inter);
+    font-weight: 400;
+    line-height: 1.6;
+    color: #1f2937;
+  }
+
+  .font-cormorant {
+    font-family: var(--font-cormorant);
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #f3f4f6;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--bloom-primary);
+    border-radius: 5px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--bloom-primary-light);
+  }
+}
+
+@layer components {
+  /* Container */
+  .container {
+    @apply w-full mx-auto px-4 sm:px-6 lg:px-8;
+    max-width: 1280px;
+  }
+
+  /* Headings */
+  .heading-1 {
+    @apply font-cormorant text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-light leading-[0.9] tracking-tight;
+  }
+
+  .heading-2 {
+    @apply font-cormorant text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-light leading-tight;
+  }
+
+  .heading-3 {
+    @apply font-cormorant text-2xl sm:text-3xl lg:text-4xl font-light leading-tight;
+  }
+
+  .heading-4 {
+    @apply font-cormorant text-xl sm:text-2xl lg:text-3xl font-light;
+  }
+
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center font-medium transition-all duration-300 rounded-full;
+  }
+
+  .btn-primary {
+    @apply bg-bloom-primary text-white hover:bg-bloom-primary/90 hover:shadow-xl hover:scale-[1.02];
+  }
+
+  .btn-secondary {
+    @apply bg-bloom-secondary text-white hover:bg-bloom-secondary/90 hover:shadow-xl hover:scale-[1.02];
+  }
+
+  .btn-outline {
+    @apply bg-transparent border-2 border-bloom-primary text-bloom-primary hover:bg-bloom-primary hover:text-white;
+  }
+
+  .btn-lg {
+    @apply px-10 py-5 text-lg;
+  }
+
+  .btn-md {
+    @apply px-8 py-4 text-base;
+  }
+
+  .btn-sm {
+    @apply px-6 py-3 text-sm;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300;
+  }
+
+  .card-hover {
+    @apply hover:-translate-y-2 hover:shadow-2xl;
+  }
+
+  /* Gradients */
+  .gradient-primary {
+    @apply bg-gradient-to-br from-bloom-primary to-bloom-primary/80;
+  }
+
+  .gradient-secondary {
+    @apply bg-gradient-to-br from-bloom-secondary to-bloom-secondary/80;
+  }
+
+  .gradient-hero {
+    background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 25%, #fef3c7 50%, #ecfccb 75%, #f8fafc 100%);
+  }
+
+  /* Text styles */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-bloom-primary to-bloom-secondary;
+  }
+
+  /* Animations */
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+  }
+
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.6s ease-out forwards;
+  }
+
+  /* Overlay patterns */
+  .pattern-dots {
+    background-image: radial-gradient(circle, #183a1d 1px, transparent 1px);
+    background-size: 20px 20px;
+    opacity: 0.03;
+  }
+
+  .pattern-grid {
+    background-image: 
+      linear-gradient(rgba(24, 58, 29, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(24, 58, 29, 0.1) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+}
+
+@layer utilities {
+  /* Custom utilities */
+  .bg-bloom-primary {
+    background-color: var(--bloom-primary);
+  }
+
+  .bg-bloom-secondary {
+    background-color: var(--bloom-secondary);
+  }
+
+  .text-bloom-primary {
+    color: var(--bloom-primary);
+  }
+
+  .text-bloom-secondary {
+    color: var(--bloom-secondary);
+  }
+
+  .border-bloom-primary {
+    border-color: var(--bloom-primary);
+  }
+
+  .border-bloom-secondary {
+    border-color: var(--bloom-secondary);
+  }
+
+  /* Hover utilities */
+  .hover\:bg-bloom-primary:hover {
+    background-color: var(--bloom-primary);
+  }
+
+  .hover\:bg-bloom-secondary:hover {
+    background-color: var(--bloom-secondary);
+  }
+
+  .hover\:text-bloom-primary:hover {
+    color: var(--bloom-primary);
+  }
+
+  .hover\:text-bloom-secondary:hover {
+    color: var(--bloom-secondary);
+  }
+}

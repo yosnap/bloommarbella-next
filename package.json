@@ -1,0 +1,53 @@
+{
+  "name": "bloommarbella-nextjs",
+  "version": "1.0.0",
+  "description": "## Información del Proyecto",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "sync-demo": "node scripts/sync-demo-data.js",
+    "sync-real": "node scripts/sync-real-simple.js",
+    "create-admin": "node scripts/create-admin.js",
+    "sync-start": "node scripts/cron-sync-fixed.js start",
+    "sync-manual": "node scripts/cron-sync-fixed.js sync",
+    "sync-full": "node scripts/cron-sync-fixed.js full",
+    "sync-status": "node scripts/cron-sync-fixed.js status",
+    "db:generate": "npx prisma generate",
+    "db:push": "npx prisma db push"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@auth/prisma-adapter": "^2.10.0",
+    "@prisma/client": "^6.11.1",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@types/node": "^24.0.12",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "autoprefixer": "^10.4.21",
+    "bcryptjs": "^3.0.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.525.0",
+    "next": "^15.3.5",
+    "next-auth": "^4.24.11",
+    "node-fetch": "^3.3.2",
+    "postcss": "^8.5.6",
+    "prisma": "^6.11.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tailwind-merge": "^3.3.1",
+    "tailwindcss": "^3.4.17",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "^5.8.3"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "ts-node": "^10.9.2"
+  }
+}

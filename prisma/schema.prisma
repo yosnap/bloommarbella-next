@@ -1,0 +1,251 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication and role management
+model User {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  email         String    @unique
+  password      String
+  name          String?
+  role          UserRole  @default(CUSTOMER)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  orders        Order[]
+  cart          Cart?
+  blogPosts     BlogPost[]
+  associateRequest AssociateRequest?
+  favorites     Favorite[]
+  
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  ASSOCIATE
+  CUSTOMER
+}
+
+// Associate verification requests
+model AssociateRequest {
+  id                    String                @id @default(auto()) @map("_id") @db.ObjectId
+  userId                String                @unique @db.ObjectId
+  user                  User                  @relation(fields: [userId], references: [id])
+  companyName           String
+  taxId                 String                // CIF/NIF
+  phone                 String
+  address               String
+  city                  String
+  postalCode            String
+  documentType          DocumentType
+  documentUrl           String                // URL del documento subido
+  status                RequestStatus         @default(PENDING)
+  rejectionReason       String?
+  verifiedBy            String?               // Admin ID who verified
+  verifiedAt            DateTime?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  
+  @@map("associate_requests")
+}
+
+enum DocumentType {
+  COMPANY_CERTIFICATE   // Certificado de empresa
+  SOCIAL_SECURITY      // Alta en Seguridad Social
+  FREELANCE_REGISTER   // Alta como autónomo
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Product model (synced from Nieuwkoop API)
+model Product {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  nieuwkoopId     String    @unique
+  sku             String    @unique
+  slug            String?   @unique  // SEO-friendly URL slug
+  name            String
+  description     String?
+  category        String
+  subcategory     String?
+  basePrice       Float     // Original price from Nieuwkoop
+  stock           Int
+  images          String[]
+  specifications  Json?
+  active          Boolean   @default(true)
+  lastStockCheck  DateTime? // For hybrid sync tracking
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  cartItems       CartItem[]
+  orderItems      OrderItem[]
+  favorites       Favorite[]
+  
+  @@map("products")
+}
+
+// Shopping cart
+model Cart {
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String     @unique @db.ObjectId
+  user      User       @relation(fields: [userId], references: [id])
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  
+  @@map("carts")
+}
+
+model CartItem {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  cartId    String   @db.ObjectId
+  cart      Cart     @relation(fields: [cartId], references: [id])
+  productId String   @db.ObjectId
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  
+  @@map("cart_items")
+}
+
+// Favorites
+model Favorite {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  productId String   @db.ObjectId
+  product   Product  @relation(fields: [productId], references: [id])
+  createdAt DateTime @default(now())
+  
+  @@unique([userId, productId])
+  @@map("favorites")
+}
+
+// Orders
+model Order {
+  id              String      @id @default(auto()) @map("_id") @db.ObjectId
+  orderNumber     String      @unique
+  userId          String      @db.ObjectId
+  user            User        @relation(fields: [userId], references: [id])
+  items           OrderItem[]
+  subtotal        Float
+  discount        Float       @default(0)
+  tax             Float
+  shipping        Float
+  total           Float
+  status          OrderStatus @default(PENDING)
+  shippingAddress Json
+  billingAddress  Json
+  paymentMethod   String
+  paymentStatus   String
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  orderId   String  @db.ObjectId
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String  @db.ObjectId
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Float   // Price at the time of purchase
+  
+  @@map("order_items")
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+// Blog
+model BlogPost {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  title      String
+  slug       String   @unique
+  content    String
+  excerpt    String?
+  coverImage String?
+  published  Boolean  @default(false)
+  authorId   String   @db.ObjectId
+  author     User     @relation(fields: [authorId], references: [id])
+  tags       String[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@map("blog_posts")
+}
+
+// Services
+model Service {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  slug        String   @unique
+  description String
+  price       Float?
+  image       String?
+  features    String[]
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("services")
+}
+
+// Translations
+model Translation {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  category    String
+  englishText String
+  spanishText String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([category, englishText])
+  @@map("translations")
+}
+
+// Configuration
+model Configuration {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  key             String   @unique
+  value           Json
+  description     String?
+  updatedAt       DateTime @updatedAt
+  
+  @@map("configurations")
+}
+
+// Sync logs for tracking synchronization activities
+model SyncLog {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  type              String   // 'hybrid-changes', 'hybrid-full', 'cron-changes', etc.
+  status            String   // 'success', 'partial', 'error'
+  productsProcessed Int      @default(0)
+  errors            Int      @default(0)
+  metadata          Json?    // Additional sync information
+  createdAt         DateTime @default(now())
+  
+  @@map("sync_logs")
+}

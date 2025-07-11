@@ -1,0 +1,194 @@
+# Changelog
+
+Todos los cambios notables en este proyecto serán documentados en este archivo.
+
+El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
+y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.0.0] - 2025-01-11
+
+### 🎉 Lanzamiento Inicial - Versión Estable
+
+#### ✨ Funcionalidades Principales Implementadas
+
+##### Autenticación y Usuarios
+- ✅ Sistema de autenticación completo con NextAuth.js
+- ✅ Roles de usuario: CUSTOMER y ASSOCIATE  
+- ✅ Registro con aprobación manual para asociados
+- ✅ Páginas de login y registro personalizadas
+- ✅ Gestión de sesiones con MongoDB
+
+##### Catálogo de Productos  
+- ✅ Integración completa con API Nieuwkoop Europe
+- ✅ Listado con paginación configurable (12, 16, 24, 36 items)
+- ✅ Ordenamiento múltiple: alfabético, precio, fecha, ofertas
+- ✅ Filtros por categorías jerárquicas
+- ✅ Vista grid/lista intercambiable
+- ✅ Búsqueda por nombre de producto
+- ✅ Sincronización en tiempo real del stock
+
+##### Sistema de Precios Avanzado
+- ✅ Multiplicador configurable sobre precios base (x2.5 default)
+- ✅ Precios diferenciados por rol de usuario
+- ✅ Toggle IVA para usuarios asociados
+- ✅ Visualización de descuentos con precios tachados
+- ✅ Descuento del 20% para asociados
+
+##### Sistema de Favoritos
+- ✅ Agregar/quitar productos de favoritos
+- ✅ Soporte completo para usuarios anónimos con localStorage
+- ✅ Sincronización automática al iniciar sesión
+- ✅ Contador en header con badge numérico
+- ✅ Página dedicada de gestión de favoritos
+- ✅ Notificaciones toast al interactuar
+
+##### Sistema de Traducciones Dinámicas
+- ✅ Base de datos de traducciones por categorías
+- ✅ Panel de administración CRUD completo
+- ✅ Autocompletado inteligente en búsquedas
+- ✅ Importación/exportación masiva en CSV
+- ✅ API endpoints para uso en cliente
+- ✅ Cache con TTL de 5 minutos
+
+##### Panel de Administración
+- ✅ Dashboard con métricas principales
+- ✅ Gestión de visibilidad de productos
+- ✅ Búsqueda por ItemCode con autocompletado
+- ✅ Configuración del multiplicador de precios
+- ✅ Gestión completa de traducciones
+- ✅ Configuración de cache y sistema
+- ✅ Acciones rápidas en dashboard
+
+##### Interfaz de Usuario Premium
+- ✅ Diseño elegante con paleta de colores personalizada (#183a1d, #f0a04b)
+- ✅ Tipografías Cormorant Infant + Inter
+- ✅ Componentes reutilizables con shadcn/ui
+- ✅ Animaciones suaves y transiciones
+- ✅ Banner deslizante informativo para asociados
+- ✅ Sistema global de notificaciones toast
+- ✅ Diseño responsive mobile-first
+
+#### 🛠️ Stack Tecnológico
+
+- **Framework**: Next.js 15.3.5 con App Router
+- **Lenguaje**: TypeScript 5.x
+- **Base de Datos**: MongoDB con Prisma ORM
+- **Estilos**: Tailwind CSS + shadcn/ui
+- **Autenticación**: NextAuth.js v4
+- **Iconos**: Lucide React
+- **Optimización de Imágenes**: Next/Image
+
+#### 🐛 Correcciones Importantes
+
+- Fix: Compatibilidad completa con Next.js 15 (params como Promise)
+- Fix: Traducciones de características usando API routes
+- Fix: Gestión de múltiples instancias del servidor
+- Fix: Sistema de precios para diferentes roles
+- Fix: Autenticación y autorización de rutas
+- Fix: PrismaClient en entorno de navegador
+
+#### 📝 Documentación
+
+- README.md completo con instalación y configuración
+- CLAUDE.md con documentación técnica detallada
+- CHANGELOG.md con historial de cambios
+- Estructura de proyecto bien organizada
+- Comentarios en código para funciones críticas
+
+## [0.9.0] - 2025-01-10
+
+### Añadido
+- Sistema de favoritos completo con localStorage
+- Notificaciones toast globales
+- Banner deslizante para asociados
+- Debug panel para desarrollo
+- Traducciones dinámicas desde BD
+
+### Mejorado
+- Rendimiento del catálogo con lazy loading
+- Sistema de cache optimizado
+- Manejo de errores mejorado
+
+## [0.8.0] - 2025-01-09
+
+### Añadido
+- Panel de administración funcional
+- Gestión de productos y visibilidad
+- Sistema de traducciones con autocompletado
+- Configuración de multiplicador de precios
+
+### Actualizado
+- Migración a Prisma ORM desde Mongoose
+- Mejoras en la UI del admin
+
+## [0.7.0] - 2025-01-08
+
+### Añadido
+- Sistema de precios diferenciados por rol
+- Toggle IVA para asociados
+- Precios tachados con descuentos
+- Integración con API de stock en tiempo real
+
+## [0.6.0] - 2025-01-07
+
+### Añadido
+- Catálogo de productos completo
+- Filtros y ordenamiento avanzado
+- Paginación configurable
+- Vista grid/lista
+
+## [0.5.0] - 2025-01-06
+
+### Añadido
+- Sistema de autenticación con NextAuth.js
+- Roles de usuario (CUSTOMER, ASSOCIATE)
+- Páginas de login y registro
+
+## [0.4.0] - 2025-01-05
+
+### Añadido
+- Integración inicial con API Nieuwkoop
+- Modelos de datos con TypeScript
+- Estructura base del proyecto
+
+## [0.3.0] - 2025-01-04
+
+### Configurado
+- Proyecto Next.js 15 con App Router
+- TypeScript y ESLint
+- Tailwind CSS y shadcn/ui
+
+## [0.2.0] - 2025-01-03
+
+### Añadido
+- Definición de requerimientos
+- Documentación inicial
+- Planificación del proyecto
+
+## [0.1.0] - 2025-01-02
+
+### Iniciado
+- Creación del repositorio
+- Estructura inicial del proyecto
+- Documentación base
+
+---
+
+## Roadmap Futuro
+
+### 📋 Próximas Funcionalidades
+
+- [ ] Sistema de carrito de compras persistente
+- [ ] Proceso de checkout completo
+- [ ] Integración con pasarelas de pago
+- [ ] Historial y tracking de pedidos
+- [ ] Sistema de blog/CMS
+- [ ] Reviews y ratings de productos
+- [ ] Sistema de cupones y descuentos
+- [ ] Chat en vivo/soporte
+- [ ] PWA (Progressive Web App)
+- [ ] Multiidioma completo
+
+---
+
+*Para ver cambios detallados entre versiones, consulte los commits en el [repositorio](https://github.com/yosnap/bloommarbella-next).*
