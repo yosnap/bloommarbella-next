@@ -361,26 +361,14 @@ vercel
 # Configurar en el dashboard de Vercel
 ```
 
-### Docker
-```dockerfile
-# Dockerfile
-FROM node:18-alpine AS base
+### Hosting Alternativo
+```bash
+# Configuración para servidores tradicionales
+npm run build
+npm run start
 
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-
-FROM base AS build
-RUN npm ci
-COPY . .
-RUN npm run build
-
-FROM base AS runtime
-COPY --from=build /app/.next ./.next
-COPY --from=build /app/public ./public
-
-EXPOSE 3000
-CMD ["npm", "start"]
+# Variables de entorno en producción
+# Configurar en el panel de hosting
 ```
 
 ## TODO List
