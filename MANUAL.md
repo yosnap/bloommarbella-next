@@ -109,6 +109,23 @@ Para obtener credenciales de producción:
 - Notificaciones cuando el stock baje del mínimo
 - Reportes automáticos por email
 
+### 💬 Sistema de Contacto por WhatsApp
+
+#### Cómo Funciona
+1. Navegue al catálogo de productos
+2. Busque el producto que le interese
+3. Haga clic en el botón verde de WhatsApp en cada producto
+4. Se abrirá WhatsApp con un mensaje pre-formateado que incluye:
+   - Nombre del producto
+   - Enlace directo al producto
+   - Mensaje personalizado de consulta
+
+#### Ventajas del Sistema
+- **Comunicación directa**: Contacte inmediatamente con el equipo de ventas
+- **Información contextual**: El mensaje incluye automáticamente los datos del producto
+- **Proceso simplificado**: Sin necesidad de carritos complejos
+- **Atención personalizada**: Reciba asesoramiento específico para cada producto
+
 ### 🛒 Sistema de Pedidos
 
 #### Crear Pedido

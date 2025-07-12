@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { ChevronRight, Home } from 'lucide-react'
+import { translateCategory, translateSubcategory } from '@/lib/translations'
+import { useState, useEffect } from 'react'
 
 interface ProductBreadcrumbsProps {
   productName: string
@@ -10,6 +12,60 @@ interface ProductBreadcrumbsProps {
 }
 
 export function ProductBreadcrumbs({ productName, category, subcategory }: ProductBreadcrumbsProps) {
+  const [translatedCategory, setTranslatedCategory] = useState(category || '')
+  const [translatedSubcategory, setTranslatedSubcategory] = useState(subcategory || '')
+
+  // Traducir categorías usando el API dinámico
+  useEffect(() => {
+    const translateCategories = async () => {
+      try {
+        const textsToTranslate = []
+        if (category) textsToTranslate.push(category)
+        if (subcategory && subcategory !== category) textsToTranslate.push(subcategory)
+
+        if (textsToTranslate.length === 0) return
+
+        const response = await fetch('/api/translations/public', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            texts: textsToTranslate,
+            category: 'categories'
+          })
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success && data.translations) {
+            if (category) {
+              setTranslatedCategory(data.translations[0] || category)
+            }
+            if (subcategory && subcategory !== category) {
+              const subcategoryIndex = category ? 1 : 0
+              setTranslatedSubcategory(data.translations[subcategoryIndex] || subcategory)
+            }
+          } else {
+            // Fallback a traducciones estáticas
+            if (category) setTranslatedCategory(translateCategory(category))
+            if (subcategory) setTranslatedSubcategory(translateSubcategory(subcategory))
+          }
+        } else {
+          // Fallback a traducciones estáticas
+          if (category) setTranslatedCategory(translateCategory(category))
+          if (subcategory) setTranslatedSubcategory(translateSubcategory(subcategory))
+        }
+      } catch (error) {
+        console.error('Error translating categories:', error)
+        // Fallback a traducciones estáticas
+        if (category) setTranslatedCategory(translateCategory(category))
+        if (subcategory) setTranslatedSubcategory(translateSubcategory(subcategory))
+      }
+    }
+
+    translateCategories()
+  }, [category, subcategory])
   const breadcrumbs = [
     { name: 'Inicio', href: '/', icon: Home }
   ]
@@ -20,7 +76,7 @@ export function ProductBreadcrumbs({ productName, category, subcategory }: Produ
   // Agregar categoría si existe
   if (category) {
     breadcrumbs.push({ 
-      name: category, 
+      name: translatedCategory, 
       href: `/catalogo?categories=${encodeURIComponent(category)}` 
     })
   }
@@ -28,7 +84,7 @@ export function ProductBreadcrumbs({ productName, category, subcategory }: Produ
   // Agregar subcategoría si existe y es diferente de la categoría
   if (subcategory && subcategory !== category) {
     breadcrumbs.push({ 
-      name: subcategory, 
+      name: translatedSubcategory, 
       href: `/catalogo?categories=${encodeURIComponent(subcategory)}` 
     })
   }

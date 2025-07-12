@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Search, Eye, EyeOff, Package } from 'lucide-react'
+import { ArrowLeft, Search, Eye, EyeOff, Package, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react'
 
 interface Product {
   id: string
@@ -26,6 +26,9 @@ export default function ProductsManagement() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [hiddenProducts, setHiddenProducts] = useState<Product[]>([])
+  const [hiddenLoading, setHiddenLoading] = useState(true)
+  const [showHiddenSection, setShowHiddenSection] = useState(false)
 
   useEffect(() => {
     if (status === 'loading') return
@@ -39,7 +42,28 @@ export default function ProductsManagement() {
       router.push('/auth/unauthorized')
       return
     }
+
+    // Cargar productos ocultos al montar el componente
+    fetchHiddenProducts()
   }, [session, status, router])
+
+  const fetchHiddenProducts = async () => {
+    try {
+      setHiddenLoading(true)
+      const response = await fetch('/api/admin/products/hidden')
+      const data = await response.json()
+      
+      if (data.success) {
+        setHiddenProducts(data.products)
+      } else {
+        console.error('Error fetching hidden products:', data.error)
+      }
+    } catch (error) {
+      console.error('Error fetching hidden products:', error)
+    } finally {
+      setHiddenLoading(false)
+    }
+  }
 
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
@@ -95,7 +119,7 @@ export default function ProductsManagement() {
           text: `Producto ${!product.active ? 'mostrado' : 'ocultado'} exitosamente` 
         })
         
-        // Actualizar el producto en los resultados
+        // Actualizar el producto en los resultados de búsqueda
         setSearchResults(prev => 
           prev.map(p => 
             p.id === product.id 
@@ -103,6 +127,16 @@ export default function ProductsManagement() {
               : p
           )
         )
+
+        // Actualizar la lista de productos ocultos
+        if (!product.active) {
+          // El producto se está mostrando, quitarlo de la lista de ocultos
+          setHiddenProducts(prev => prev.filter(p => p.id !== product.id))
+        } else {
+          // El producto se está ocultando, agregarlo a la lista de ocultos
+          const updatedProduct = { ...product, active: false, isHidden: true }
+          setHiddenProducts(prev => [updatedProduct, ...prev])
+        }
         
         setSelectedProduct(null)
       } else {
@@ -117,6 +151,51 @@ export default function ProductsManagement() {
 
   const clearMessage = () => {
     setMessage(null)
+  }
+
+  const showAllHiddenProducts = async () => {
+    if (hiddenProducts.length === 0) return
+    
+    setActionLoading(true)
+    try {
+      const promises = hiddenProducts.map(product =>
+        fetch('/api/products/toggle-visibility', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productId: product.id,
+            active: true
+          })
+        })
+      )
+
+      const responses = await Promise.all(promises)
+      const successCount = responses.filter(r => r.ok).length
+      
+      if (successCount === hiddenProducts.length) {
+        setMessage({ 
+          type: 'success', 
+          text: `Se mostraron ${successCount} productos exitosamente` 
+        })
+        setHiddenProducts([])
+      } else if (successCount > 0) {
+        setMessage({ 
+          type: 'success', 
+          text: `Se mostraron ${successCount} de ${hiddenProducts.length} productos` 
+        })
+        // Recargar productos ocultos para actualizar la lista
+        await fetchHiddenProducts()
+      } else {
+        setMessage({ 
+          type: 'error', 
+          text: 'No se pudieron mostrar los productos' 
+        })
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Error al mostrar productos' })
+    } finally {
+      setActionLoading(false)
+    }
   }
 
   if (status === 'loading') {
@@ -270,6 +349,119 @@ export default function ProductsManagement() {
             <p className="text-gray-600">
               Intenta buscar con un ItemCode, SKU o nombre diferente
             </p>
+          </div>
+        )}
+
+        {/* Productos Ocultos */}
+        {!hiddenLoading && hiddenProducts.length > 0 && (
+          <div className="bg-white rounded-lg shadow mb-8">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Productos Ocultos ({hiddenProducts.length})
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Productos que están ocultos del catálogo público
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={showAllHiddenProducts}
+                    disabled={actionLoading}
+                    className="flex items-center gap-2 px-4 py-2 text-green-700 bg-green-100 rounded-lg hover:bg-green-200 transition-colors disabled:opacity-50"
+                    title="Mostrar todos los productos ocultos"
+                  >
+                    <Eye className="h-4 w-4" />
+                    Mostrar todos
+                  </button>
+                  <button
+                    onClick={() => setShowHiddenSection(!showHiddenSection)}
+                    className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    {showHiddenSection ? (
+                      <>
+                        <ChevronUp className="h-4 w-4" />
+                        Ocultar lista
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="h-4 w-4" />
+                        Ver lista
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {showHiddenSection && (
+              <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+                {hiddenProducts.map((product) => (
+                  <div key={product.id} className="p-6 hover:bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center">
+                          <Package className="w-5 h-5 text-red-400 mr-3" />
+                          <div>
+                            <h3 className="text-sm font-medium text-gray-900 truncate">
+                              {product.name}
+                            </h3>
+                            <div className="flex items-center mt-1 text-sm text-gray-500">
+                              <span className="font-mono bg-gray-100 px-2 py-1 rounded">
+                                {product.itemCode}
+                              </span>
+                              <span className="mx-2">•</span>
+                              <span>{product.category}</span>
+                              {product.subcategory && (
+                                <>
+                                  <span className="mx-2">•</span>
+                                  <span>{product.subcategory}</span>
+                                </>
+                              )}
+                              <span className="mx-2">•</span>
+                              <span>€{product.price.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-4">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          <EyeOff className="w-3 h-3 mr-1" />
+                          Oculto
+                        </span>
+                        
+                        <button
+                          onClick={() => toggleProductVisibility(product)}
+                          disabled={actionLoading}
+                          className="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-green-100 text-green-700 hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {actionLoading ? 'Actualizando...' : 'Mostrar'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Estado cuando no hay productos ocultos */}
+        {!hiddenLoading && hiddenProducts.length === 0 && searchTerm.length < 2 && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-8">
+            <div className="flex items-center">
+              <Eye className="w-6 h-6 text-green-600 mr-3" />
+              <div>
+                <h3 className="text-lg font-medium text-green-900">
+                  ¡Todos los productos están visibles!
+                </h3>
+                <p className="text-green-700 mt-1">
+                  No hay productos ocultos en este momento. Usa la búsqueda para encontrar productos específicos y ocultarlos si es necesario.
+                </p>
+              </div>
+            </div>
           </div>
         )}
 

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/auth-context'
 import { usePricing } from '@/contexts/pricing-context'
-import { useFavorites } from '@/hooks/use-favorites'
+import { useFavorites } from '@/contexts/favorites-context'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -151,13 +151,33 @@ export function Header() {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showBanner, setShowBanner] = useState(true)
+  const [associateDiscount, setAssociateDiscount] = useState(20)
   const { showVatForAssociate, toggleVatDisplay, setIsAssociate } = usePricing()
-  const { favoriteIds } = useFavorites()
+  const { favoritesCount } = useFavorites()
+  
+  // Debug log para ver si el contador se actualiza
+  console.log('🚀 Header - favoritesCount:', favoritesCount)
   
   // Actualizar el estado del contexto cuando cambie el usuario
   useEffect(() => {
     setIsAssociate(isAssociate)
   }, [isAssociate, setIsAssociate])
+
+  // Obtener descuento de asociados de la configuración
+  useEffect(() => {
+    const fetchAssociateDiscount = async () => {
+      try {
+        const response = await fetch('/api/admin/configuration')
+        if (response.ok) {
+          const data = await response.json()
+          setAssociateDiscount(data.data?.associateDiscount || 20)
+        }
+      } catch (error) {
+        console.error('Error fetching associate discount:', error)
+      }
+    }
+    fetchAssociateDiscount()
+  }, [])
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -204,13 +224,13 @@ export function Header() {
             >
               Área Asociados
             </Link>
-            <span>|</span>
+            {/* <span>|</span>
             <Link 
               href="/admin" 
               className="text-white hover:text-bloom-secondary transition-colors"
             >
               Admin
-            </Link>
+            </Link> */}
           </div>
         </div>
       </div>
@@ -290,9 +310,9 @@ export function Header() {
                 className="text-gray-600 hover:text-bloom-primary transition-colors relative"
               >
                 <Heart className="h-5 w-5" />
-                {favoriteIds.size > 0 && (
+                {favoritesCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
-                    {favoriteIds.size > 99 ? '99+' : favoriteIds.size}
+                    {favoritesCount > 99 ? '99+' : favoritesCount}
                   </span>
                 )}
               </Button>
@@ -319,7 +339,7 @@ export function Header() {
                         <p className="text-xs text-gray-500">{user?.email}</p>
                         {isAssociate && (
                           <span className="inline-block mt-1 text-xs px-2 py-1 bg-bloom-secondary/10 text-bloom-secondary rounded-full">
-                            Asociado -20%
+                            Asociado -{associateDiscount}%
                           </span>
                         )}
                       </div>
@@ -348,7 +368,7 @@ export function Header() {
                           </button>
                         </div>
                       )}
-                      {isAdmin && (
+                      {/* {isAdmin && (
                         <Link
                           href="/admin"
                           className="block px-4 py-2 text-sm text-purple-600 hover:bg-purple-50 font-medium"
@@ -356,7 +376,7 @@ export function Header() {
                         >
                           Panel Admin
                         </Link>
-                      )}
+                      )} */}
                       <button
                         onClick={() => {
                           setShowUserMenu(false)

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Image from 'next/image'
-import { ShoppingCart, ArrowLeft, Heart, Share2, Package, Ruler, Weight, Globe, Truck, Tag, Thermometer, Droplets, Sun, Leaf, Info } from 'lucide-react'
+import { ShoppingCart, ArrowLeft, Heart, Share2, Package, Ruler, Weight, Globe, Truck, Tag, Thermometer, Droplets, Sun, Leaf, Info, MessageCircle } from 'lucide-react'
 import { Header } from '@/components/layouts/header'
 import { translateProductTagsClient, commonTagTranslationsClient } from '@/lib/translations/client-translator'
 import { useUserPricing } from '@/hooks/use-user-pricing'
@@ -13,6 +13,7 @@ import { useFavorites } from '@/hooks/use-favorites'
 import { ProductBreadcrumbs } from '@/components/products/product-breadcrumbs'
 import { useState as useStateHook, useEffect as useEffectHook } from 'react'
 import { isNewProduct } from '@/lib/utils/badge-utils'
+import { createWhatsAppLink, WhatsAppConfig } from '@/lib/whatsapp'
 
 interface Product {
   id: string
@@ -77,6 +78,8 @@ export default function ProductPage() {
   const [quantity, setQuantity] = useState(1)
   const [translatedTags, setTranslatedTags] = useState<Array<{ code: string; value: string }>>([])
   const [newBadgeDays, setNewBadgeDays] = useStateHook(30)
+  const [pricingConfig, setPricingConfig] = useState<{priceMultiplier: number, associateDiscount: number, vatRate: number} | null>(null)
+  const [whatsappConfig, setWhatsappConfig] = useState<WhatsAppConfig | null>(null)
   const { userRole, isAssociate, showVatForAssociate } = useUserPricing()
   const { toggleFavorite, isFavorite } = useFavorites()
 
@@ -85,6 +88,22 @@ export default function ProductPage() {
       fetchProduct()
     }
   }, [slugParam])
+
+  // Cargar configuración de WhatsApp
+  useEffect(() => {
+    const loadWhatsAppConfig = async () => {
+      try {
+        const response = await fetch('/api/whatsapp-config')
+        if (response.ok) {
+          const data = await response.json()
+          setWhatsappConfig(data.data)
+        }
+      } catch (error) {
+        console.error('Error loading WhatsApp config:', error)
+      }
+    }
+    loadWhatsAppConfig()
+  }, [])
 
   // Obtener configuración de badge "Nuevo"
   useEffectHook(() => {
@@ -135,7 +154,11 @@ export default function ProductPage() {
       const response = await fetch(`/api/products/slug/${slugParam}`)
       if (response.ok) {
         const data = await response.json()
-        setProduct(data)
+        const { config, ...productData } = data
+        setProduct(productData)
+        if (config) {
+          setPricingConfig(config)
+        }
       } else {
         console.error('Product not found')
       }
@@ -143,6 +166,16 @@ export default function ProductPage() {
       console.error('Error fetching product:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleWhatsAppContact = () => {
+    if (whatsappConfig && whatsappConfig.whatsappEnabled && product) {
+      const whatsappUrl = createWhatsAppLink(whatsappConfig, {
+        name: product.name,
+        slug: product.slug
+      })
+      window.open(whatsappUrl, '_blank')
     }
   }
 
@@ -301,7 +334,7 @@ export default function ProductPage() {
                 <div>
                   {(() => {
                     const basePrice = product.basePrice || product.currentPrice || 0
-                    const pricing = getDisplayPrice(basePrice, userRole, undefined, showVatForAssociate)
+                    const pricing = getDisplayPrice(basePrice, userRole, pricingConfig, showVatForAssociate)
                     
                     return (
                       <>
@@ -321,9 +354,9 @@ export default function ProductPage() {
                             <div className="text-sm text-gray-600">
                               {showVatForAssociate ? 'Con IVA incluido' : 'Sin IVA'}
                             </div>
-                            {pricing.originalPrice && (
+                            {pricing.originalPrice && pricingConfig && (
                               <div className="text-sm text-green-600 font-medium">
-                                Descuento asociado: 20%
+                                Descuento asociado: {Math.round(pricingConfig.associateDiscount * 100)}%
                               </div>
                             )}
                           </div>
@@ -380,13 +413,25 @@ export default function ProductPage() {
               </div>
 
               <div className="flex gap-3">
-                <button
-                  className="flex-1 bg-[#183a1d] text-white px-6 py-3 rounded-lg hover:bg-[#2a5530] transition-colors flex items-center justify-center gap-2"
-                  disabled={product.stockStatus === 'out_of_stock'}
-                >
-                  <ShoppingCart size={20} />
-                  Agregar al carrito
-                </button>
+                {/* Mostrar botón de WhatsApp si está habilitado, sino mostrar carrito */}
+                {whatsappConfig?.whatsappEnabled ? (
+                  <button
+                    onClick={handleWhatsAppContact}
+                    className="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={product.stockStatus === 'out_of_stock'}
+                  >
+                    <MessageCircle size={20} />
+                    Quiero comprarlo
+                  </button>
+                ) : (
+                  <button
+                    className="flex-1 bg-[#183a1d] text-white px-6 py-3 rounded-lg hover:bg-[#2a5530] transition-colors flex items-center justify-center gap-2"
+                    disabled={product.stockStatus === 'out_of_stock'}
+                  >
+                    <ShoppingCart size={20} />
+                    Agregar al carrito
+                  </button>
+                )}
                 <button 
                   onClick={() => toggleFavorite(product.id, product.name)}
                   className={`p-3 rounded-lg transition-colors ${

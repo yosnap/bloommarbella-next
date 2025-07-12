@@ -31,8 +31,8 @@ export default function AdminCategoriasPage() {
     try {
       setLoading(true)
       
-      // Fetch categories
-      const categoriesResponse = await fetch('/api/categories')
+      // Fetch categories (including hidden ones for admin)
+      const categoriesResponse = await fetch('/api/admin/categories/all')
       const categoriesData = await categoriesResponse.json()
       
       // Fetch hidden categories
@@ -98,6 +98,10 @@ export default function AdminCategoriasPage() {
     fetchData()
   }
 
+  const showAllCategories = () => {
+    setHiddenCategories([])
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -127,6 +131,17 @@ export default function AdminCategoriasPage() {
                 </p>
               </div>
               <div className="flex gap-3">
+                {hiddenCategories.length > 0 && (
+                  <button
+                    onClick={showAllCategories}
+                    disabled={saving}
+                    className="flex items-center gap-2 px-4 py-2 text-green-700 bg-green-100 rounded-lg hover:bg-green-200 transition-colors disabled:opacity-50"
+                    title="Mostrar todas las categorías ocultas"
+                  >
+                    <Eye className="h-4 w-4" />
+                    Mostrar todas
+                  </button>
+                )}
                 <button
                   onClick={resetChanges}
                   disabled={saving}
@@ -244,6 +259,74 @@ export default function AdminCategoriasPage() {
                 )
               })}
             </div>
+
+            {/* Hidden Categories Section */}
+            {hiddenCategories.length > 0 && (
+              <div className="mt-8 p-4 bg-red-50 rounded-lg border border-red-200">
+                <h3 className="text-lg font-semibold text-red-900 mb-3">Categorías Ocultas</h3>
+                <p className="text-sm text-red-700 mb-4">
+                  Las siguientes categorías están ocultas del catálogo público. Haz clic en el icono para volver a mostrarlas:
+                </p>
+                <div className="space-y-2">
+                  {hiddenCategories.map((hiddenCategory) => {
+                    // Try to find the category in the data to get display name
+                    let displayName = hiddenCategory
+                    let productCount = 0
+                    let isMainCategory = false
+                    
+                    // Check if it's a main category
+                    const mainCategory = categories.find(cat => cat.name === hiddenCategory)
+                    if (mainCategory) {
+                      displayName = mainCategory.displayName
+                      productCount = mainCategory.count
+                      isMainCategory = true
+                    } else {
+                      // Check if it's a subcategory
+                      for (const category of categories) {
+                        if (category.categorias) {
+                          const subcategory = category.categorias.find(sub => sub.name === hiddenCategory)
+                          if (subcategory) {
+                            displayName = subcategory.displayName
+                            productCount = subcategory.count
+                            break
+                          }
+                        }
+                      }
+                    }
+                    
+                    return (
+                      <div key={hiddenCategory} className="flex items-center justify-between p-3 bg-white rounded border border-red-200">
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => isMainCategory ? toggleCategoryVisibility(hiddenCategory) : toggleSubcategoryVisibility(hiddenCategory)}
+                            className="p-1 rounded bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                            title="Mostrar categoría"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          <div>
+                            <span className="text-sm font-medium text-gray-900">
+                              {displayName}
+                            </span>
+                            <span className="text-xs text-gray-500 ml-2">
+                              ({productCount.toLocaleString()} productos)
+                            </span>
+                            {isMainCategory && (
+                              <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                                Categoría Principal
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-xs text-red-600 font-medium">
+                          Oculta
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Summary */}
             <div className="mt-8 p-4 bg-gray-50 rounded-lg">

@@ -2,13 +2,15 @@
 
 import Link from 'next/link'
 import { ChevronRight, Home } from 'lucide-react'
+import { toUrlFriendly } from '@/lib/utils/url-helpers'
 
 interface BreadcrumbsProps {
   searchTerm?: string
   selectedCategories?: string[]
+  selectedBrands?: string[]
 }
 
-export function Breadcrumbs({ searchTerm, selectedCategories = [] }: BreadcrumbsProps) {
+export function Breadcrumbs({ searchTerm, selectedCategories = [], selectedBrands = [] }: BreadcrumbsProps) {
   const breadcrumbs = [
     { name: 'Inicio', href: '/', icon: Home }
   ]
@@ -16,25 +18,34 @@ export function Breadcrumbs({ searchTerm, selectedCategories = [] }: Breadcrumbs
   // Agregar catálogo como segundo nivel
   breadcrumbs.push({ name: 'Catálogo', href: '/catalogo' })
 
-  // Agregar filtros activos
-  if (selectedCategories.length > 0) {
-    if (selectedCategories.length === 1) {
-      breadcrumbs.push({ 
-        name: selectedCategories[0], 
-        href: `/catalogo?categories=${selectedCategories[0]}` 
-      })
-    } else {
-      breadcrumbs.push({ 
-        name: `${selectedCategories.length} categorías`, 
-        href: `/catalogo?categories=${selectedCategories.join(',')}` 
-      })
-    }
-  }
-
+  // Agregar filtros activos con URLs amigables
   if (searchTerm) {
+    const searchSlug = toUrlFriendly(searchTerm)
     breadcrumbs.push({ 
       name: `Búsqueda: "${searchTerm}"`, 
-      href: `/catalogo?search=${encodeURIComponent(searchTerm)}` 
+      href: `/catalogo/search/${searchSlug}` 
+    })
+  } else if (selectedBrands.length === 1) {
+    const brandSlug = toUrlFriendly(selectedBrands[0])
+    breadcrumbs.push({ 
+      name: selectedBrands[0], 
+      href: `/catalogo/marca/${brandSlug}` 
+    })
+  } else if (selectedCategories.length === 1) {
+    const categorySlug = toUrlFriendly(selectedCategories[0])
+    breadcrumbs.push({ 
+      name: selectedCategories[0], 
+      href: `/catalogo/categoria/${categorySlug}` 
+    })
+  } else if (selectedCategories.length > 1) {
+    breadcrumbs.push({ 
+      name: `${selectedCategories.length} categorías`, 
+      href: `/catalogo?categories=${selectedCategories.join(',')}` 
+    })
+  } else if (selectedBrands.length > 1) {
+    breadcrumbs.push({ 
+      name: `${selectedBrands.length} marcas`, 
+      href: `/catalogo?brands=${selectedBrands.join(',')}` 
     })
   }
 

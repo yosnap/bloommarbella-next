@@ -1,13 +1,14 @@
 'use client'
 
-import { ShoppingCart, Heart } from 'lucide-react'
+import { ShoppingCart, Heart, MessageCircle } from 'lucide-react'
 import Image from 'next/image'
 import { Product, ProductCardProps } from '@/types/product'
 import { getDisplayPrice, formatPrice } from '@/lib/pricing'
 import { usePricing } from '@/contexts/pricing-context'
-import { useFavorites } from '@/hooks/use-favorites'
+import { useFavorites } from '@/contexts/favorites-context'
 import { useState, useEffect } from 'react'
 import { isNewProduct } from '@/lib/utils/badge-utils'
+import { createWhatsAppLink, WhatsAppConfig } from '@/lib/whatsapp'
 
 export function ProductCard({ 
   product, 
@@ -19,31 +20,36 @@ export function ProductCard({
   showDiscount = true,
   showRibbons = true,
   className = '',
-  priority = false
+  priority = false,
+  pricingConfig
 }: ProductCardProps) {
   const { showVatForAssociate } = usePricing()
   const { toggleFavorite, isFavorite } = useFavorites()
   const isAssociate = userRole === 'ASSOCIATE'
   const [newBadgeDays, setNewBadgeDays] = useState(30)
+  const [whatsappConfig, setWhatsappConfig] = useState<WhatsAppConfig | null>(null)
   
-  // Obtener configuración de badge "Nuevo"
+  // Usar valor por defecto para badge "Nuevo" (30 días)
+  // La configuración admin no debe ser accedida desde componentes públicos
+  
+  // Cargar configuración de WhatsApp
   useEffect(() => {
-    const getConfig = async () => {
+    const loadWhatsAppConfig = async () => {
       try {
-        const response = await fetch('/api/admin/configuration')
+        const response = await fetch('/api/whatsapp-config')
         if (response.ok) {
           const data = await response.json()
-          setNewBadgeDays(data.data?.newBadgeDays || 30)
+          setWhatsappConfig(data.data)
         }
       } catch (error) {
-        console.error('Error getting badge config:', error)
+        console.error('Error loading WhatsApp config:', error)
       }
     }
-    getConfig()
+    loadWhatsAppConfig()
   }, [])
   
   // Obtener precios calculados según el rol del usuario y preferencia de IVA
-  const pricing = getDisplayPrice(product.basePrice, userRole, undefined, showVatForAssociate)
+  const pricing = getDisplayPrice(product.basePrice, userRole, pricingConfig, showVatForAssociate)
   
   // Verificar si el producto es nuevo
   const isNew = isNewProduct(product.sysmodified, newBadgeDays)
@@ -78,6 +84,17 @@ export function ProductCard({
   const handleToggleFavorite = (e: React.MouseEvent) => {
     e.stopPropagation()
     toggleFavorite(product.id, product.name)
+  }
+
+  const handleWhatsAppContact = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (whatsappConfig && whatsappConfig.whatsappEnabled) {
+      const whatsappUrl = createWhatsAppLink(whatsappConfig, {
+        name: product.name,
+        slug: product.slug
+      })
+      window.open(whatsappUrl, '_blank')
+    }
   }
 
   return (
@@ -132,11 +149,12 @@ export function ProductCard({
                 Agotado
               </div>
             )}
-            {product.isRealTimeData && (
+            {/* Badge "Actualizado" - DESACTIVADO temporalmente */}
+            {/* {product.isRealTimeData && (
               <div className="absolute top-2 left-2 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-medium">
                 ✓ Actualizado
               </div>
-            )}
+            )} */}
             {product.isOffer && product.stockStatus === 'in_stock' && (
               <div className="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 rounded-full text-xs font-medium animate-pulse">
                 ¡Oferta!
@@ -180,7 +198,17 @@ export function ProductCard({
                 >
                   <Heart size={18} className={isFavorite(product.id) ? 'fill-current' : ''} />
                 </button>
-                {showAddToCart && (
+                {/* Mostrar botón de WhatsApp si está habilitado, sino mostrar carrito */}
+                {whatsappConfig?.whatsappEnabled ? (
+                  <button
+                    onClick={handleWhatsAppContact}
+                    className="bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={product.availability === 'out_of_stock'}
+                    title="Contactar por WhatsApp"
+                  >
+                    <MessageCircle size={18} />
+                  </button>
+                ) : showAddToCart && (
                   <button
                     onClick={handleAddToCart}
                     className="bg-[#183a1d] text-white p-2 rounded-lg hover:bg-[#2a5530] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -226,7 +254,17 @@ export function ProductCard({
               >
                 <Heart size={18} className={isFavorite(product.id) ? 'fill-current' : ''} />
               </button>
-              {showAddToCart && (
+              {/* Mostrar botón de WhatsApp si está habilitado, sino mostrar carrito */}
+              {whatsappConfig?.whatsappEnabled ? (
+                <button
+                  onClick={handleWhatsAppContact}
+                  className="bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={product.availability === 'out_of_stock'}
+                  title="Contactar por WhatsApp"
+                >
+                  <MessageCircle size={18} />
+                </button>
+              ) : showAddToCart && (
                 <button
                   onClick={handleAddToCart}
                   className="bg-[#183a1d] text-white p-2 rounded-lg hover:bg-[#2a5530] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

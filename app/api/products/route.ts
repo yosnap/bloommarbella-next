@@ -19,17 +19,21 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100)
     const category = searchParams.get('category')
     const categories = searchParams.get('categories')
+    const brands = searchParams.get('brands')
     const search = searchParams.get('search')
     const sortBy = searchParams.get('sortBy') || 'name'
     const sortOrder = searchParams.get('sortOrder') || 'asc'
 
     // Parse categories parameter (comma-separated list)
     const categoryFilters = categories ? categories.split(',').map(c => c.trim()).filter(c => c) : []
+    // Parse brands parameter (comma-separated list)
+    const brandFilters = brands ? brands.split(',').map(b => b.trim()).filter(b => b) : []
     
     // Get products with real-time data
     const result = await hybridSync.getProductsWithRealtimeData({
       category,
       categories: categoryFilters,
+      brands: brandFilters,
       search,
       page,
       limit,
@@ -112,6 +116,14 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    // Get filter counts for the current query (without pagination)
+    const filterInfo = await hybridSync.getFilterCounts({
+      category,
+      categories: categoryFilters,
+      brands: brandFilters,
+      search
+    })
+
     return NextResponse.json({
       success: true,
       data: transformedProducts,
@@ -128,6 +140,12 @@ export async function GET(request: NextRequest) {
         totalProducts: result.pagination.total,
         realTimeDataCount: transformedProducts.filter(p => p.isRealTimeData).length,
         timestamp: new Date().toISOString()
+      },
+      filters: filterInfo,
+      config: {
+        priceMultiplier,
+        associateDiscount: associateDiscount / 100,
+        vatRate: 0.21
       }
     })
   } catch (error: any) {

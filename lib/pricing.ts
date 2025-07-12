@@ -15,7 +15,7 @@ const defaultConfig: PricingConfig = {
 export function calculatePrice(
   basePrice: number,
   userRole?: UserRole,
-  config: PricingConfig = defaultConfig
+  config?: PricingConfig | null
 ): {
   priceWithoutVat: number
   priceWithVat: number
@@ -24,9 +24,12 @@ export function calculatePrice(
   hasDiscount: boolean
   discountPercentage: number
 } {
+  // Use provided config or fallback to default
+  const activeConfig = config || defaultConfig
+  
   // Calculate original price without VAT (PVP sin IVA)
-  const originalPriceWithoutVat = basePrice * config.priceMultiplier
-  const originalPriceWithVat = originalPriceWithoutVat * (1 + config.vatRate)
+  const originalPriceWithoutVat = basePrice * activeConfig.priceMultiplier
+  const originalPriceWithVat = originalPriceWithoutVat * (1 + activeConfig.vatRate)
   
   let finalPriceWithoutVat = originalPriceWithoutVat
   let hasDiscount = false
@@ -34,12 +37,12 @@ export function calculatePrice(
   
   // Apply associate discount if applicable
   if (userRole === 'ASSOCIATE') {
-    finalPriceWithoutVat = originalPriceWithoutVat * (1 - config.associateDiscount)
+    finalPriceWithoutVat = originalPriceWithoutVat * (1 - activeConfig.associateDiscount)
     hasDiscount = true
-    discountPercentage = Math.round(config.associateDiscount * 100)
+    discountPercentage = Math.round(activeConfig.associateDiscount * 100)
   }
   
-  const finalPriceWithVat = finalPriceWithoutVat * (1 + config.vatRate)
+  const finalPriceWithVat = finalPriceWithoutVat * (1 + activeConfig.vatRate)
   
   return {
     priceWithoutVat: Math.round(finalPriceWithoutVat * 100) / 100,
@@ -72,7 +75,7 @@ export function calculateDiscount(
 export function getDisplayPrice(
   basePrice: number,
   userRole?: UserRole,
-  config: PricingConfig = defaultConfig,
+  config?: PricingConfig | null,
   showVatForAssociate: boolean = false
 ): {
   displayPrice: number

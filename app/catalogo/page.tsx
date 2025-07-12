@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { Header } from '@/components/layouts/header'
 import { calculatePrice } from '@/lib/pricing'
 import { Search, Filter, Grid, List } from 'lucide-react'
@@ -10,21 +10,34 @@ import { ProductCard } from '@/components/products/product-card'
 import { Product } from '@/types/product'
 import { useUserPricing } from '@/hooks/use-user-pricing'
 import { CategoryFilter } from '@/components/catalog/category-filter'
+import { BrandFilter } from '@/components/catalog/brand-filter'
 import { ActiveFilters } from '@/components/catalog/active-filters'
 import { Breadcrumbs } from '@/components/catalog/breadcrumbs'
+import { generateCatalogUrl, navigateToCatalog, parseFiltersFromUrl } from '@/lib/utils/url-helpers'
 
 // Interfaces y tipos ahora están en /types/product.ts
 
-export default function CatalogoPage() {
+interface CatalogoPageProps {
+  initialFilters?: {
+    selectedBrands: string[]
+    selectedCategories: string[]
+    searchTerm: string
+  }
+}
+
+export default function CatalogoPage({ initialFilters }: CatalogoPageProps) {
   const { data: session } = useSession()
   const { userRole } = useUserPricing()
+  const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
+  const [searchTerm, setSearchTerm] = useState(initialFilters?.searchTerm || '')
   const [selectedCategory, setSelectedCategory] = useState('')
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialFilters?.selectedCategories || [])
+  const [selectedBrands, setSelectedBrands] = useState<string[]>(initialFilters?.selectedBrands || [])
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [showFilters, setShowFilters] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
@@ -36,6 +49,8 @@ export default function CatalogoPage() {
   const [sortOrder, setSortOrder] = useState('asc')
   const [hasOffersAvailable, setHasOffersAvailable] = useState(false)
   const [itemsPerPage, setItemsPerPage] = useState(16)
+  const [pricingConfig, setPricingConfig] = useState<{priceMultiplier: number, associateDiscount: number, vatRate: number} | null>(null)
+  const [filterCounts, setFilterCounts] = useState<{categories: Array<{name: string, count: number}>, brands: Array<{name: string, count: number}>} | null>(null)
   
   const filteredProducts = products.filter(product => product.active)
   
@@ -45,48 +60,108 @@ export default function CatalogoPage() {
     alert(`Producto "${product.name}" agregado al carrito (funcionalidad pendiente)`)
   }
 
-  // Funciones para manejar filtros activos
-  const handleRemoveSearch = () => {
-    setSearchTerm('')
-    setCurrentPage(1)
+  // Navegar a URL amigable
+  const navigateToFilters = async () => {
+    await navigateToCatalog(router, {
+      brands: selectedBrands,
+      categories: selectedCategories,
+      search: searchTerm
+    })
   }
 
-  const handleRemoveCategory = (category: string) => {
+  // Funciones para manejar filtros activos
+  const handleRemoveSearch = async () => {
+    setSearchTerm('')
+    setCurrentPage(1)
+    
+    // Navegar con filtros actualizados
+    const url = await generateCatalogUrl({
+      brands: selectedBrands,
+      categories: selectedCategories,
+      search: ''
+    })
+    router.push(url)
+  }
+
+  const handleRemoveCategory = async (category: string) => {
     const newCategories = selectedCategories.filter(c => c !== category)
     setSelectedCategories(newCategories)
     setCurrentPage(1)
+    
+    // Navegar con filtros actualizados
+    const url = await generateCatalogUrl({
+      brands: selectedBrands,
+      categories: newCategories,
+      search: searchTerm
+    })
+    router.push(url)
   }
 
-  const handleClearAllFilters = () => {
+  const handleRemoveBrand = async (brand: string) => {
+    const newBrands = selectedBrands.filter(b => b !== brand)
+    setSelectedBrands(newBrands)
+    setCurrentPage(1)
+    
+    // Navegar con filtros actualizados
+    const url = await generateCatalogUrl({
+      brands: newBrands,
+      categories: selectedCategories,
+      search: searchTerm
+    })
+    router.push(url)
+  }
+
+  const handleClearAllFilters = async () => {
     setSearchTerm('')
     setSelectedCategories([])
+    setSelectedBrands([])
     setCurrentPage(1)
+    
+    // Navegar a la URL base del catálogo
+    router.push('/catalogo')
   }
 
-  // Read URL parameters on page load
+  // Read URL parameters on page load (solo si no hay initialFilters)
   useEffect(() => {
-    const categoriesParam = searchParams.get('categories')
-    const searchParam = searchParams.get('search')
-    
-    if (categoriesParam) {
-      setSelectedCategories(categoriesParam.split(','))
-    }
-    
-    if (searchParam) {
-      setSearchTerm(searchParam)
+    if (!initialFilters) {
+      const filters = parseFiltersFromUrl(pathname, searchParams)
+      setSelectedCategories(filters.categories)
+      setSelectedBrands(filters.brands)
+      setSearchTerm(filters.search)
     }
     
     fetchProducts(1, true)
-  }, [])
+  }, [pathname, searchParams, initialFilters])
   
+  // useEffect para búsqueda con debounce y navegación
   useEffect(() => {
-    const delayDebounce = setTimeout(() => {
+    const delayDebounce = setTimeout(async () => {
       setCurrentPage(1)
       fetchProducts(1, true)
+      
+      // Solo navegar si no es la carga inicial
+      if (!initialFilters) {
+        await navigateToFilters()
+      }
     }, 300)
     
     return () => clearTimeout(delayDebounce)
-  }, [searchTerm, selectedCategory, selectedCategories, sortBy, sortOrder])
+  }, [searchTerm])
+
+  // useEffect para otros filtros con navegación
+  useEffect(() => {
+    const handleFilterChange = async () => {
+      setCurrentPage(1)
+      fetchProducts(1, true)
+      
+      // Solo navegar si no es la carga inicial
+      if (!initialFilters) {
+        await navigateToFilters()
+      }
+    }
+
+    handleFilterChange()
+  }, [selectedCategories, selectedBrands, sortBy, sortOrder])
 
   const fetchProducts = async (page = 1, resetProducts = false) => {
     try {
@@ -96,6 +171,7 @@ export default function CatalogoPage() {
         limit: itemsPerPage.toString(),
         ...(selectedCategory && { category: selectedCategory }),
         ...(selectedCategories.length > 0 && { categories: selectedCategories.join(',') }),
+        ...(selectedBrands.length > 0 && { brands: selectedBrands.join(',') }),
         ...(searchTerm && { search: searchTerm }),
         sortBy: sortBy,
         sortOrder: sortOrder
@@ -118,6 +194,16 @@ export default function CatalogoPage() {
       setTotalProducts(data.pagination.total)
       setHasNextPage(data.pagination.hasNextPage)
       setHasPrevPage(data.pagination.hasPrevPage)
+      
+      // Guardar configuración de precios
+      if (data.config) {
+        setPricingConfig(data.config)
+      }
+      
+      // Actualizar conteos de filtros
+      if (data.filters) {
+        setFilterCounts(data.filters)
+      }
       
       // Verificar si hay productos en oferta
       const hasOffers = data.data.some((product: any) => product.isOffer === true)
@@ -194,10 +280,16 @@ export default function CatalogoPage() {
                 onCategoryChange={setSelectedCategories}
               />
               
+              <BrandFilter
+                selectedBrands={selectedBrands}
+                onBrandChange={setSelectedBrands}
+                filterCounts={filterCounts?.brands}
+              />
+              
               {session?.user?.role === 'ASSOCIATE' && (
                 <div className="bg-[#f0a04b] text-white p-3 rounded-lg text-sm">
                   <p className="font-medium">¡Descuento Asociado!</p>
-                  <p>Obtienes 20% de descuento en todos los productos</p>
+                  <p>Obtienes {pricingConfig ? Math.round(pricingConfig.associateDiscount * 100) : 20}% de descuento en todos los productos</p>
                 </div>
               )}
             </div>
@@ -209,14 +301,17 @@ export default function CatalogoPage() {
             <Breadcrumbs 
               searchTerm={searchTerm} 
               selectedCategories={selectedCategories}
+              selectedBrands={selectedBrands}
             />
             
             {/* Filtros activos */}
             <ActiveFilters
               searchTerm={searchTerm}
               selectedCategories={selectedCategories}
+              selectedBrands={selectedBrands}
               onRemoveSearch={handleRemoveSearch}
               onRemoveCategory={handleRemoveCategory}
+              onRemoveBrand={handleRemoveBrand}
               onClearAll={handleClearAllFilters}
             />
             
@@ -286,16 +381,21 @@ export default function CatalogoPage() {
               </div>
             </div>
             
-            {filteredProducts.length === 0 ? (
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#183a1d] mx-auto mb-4"></div>
+                <p className="text-gray-600">Cargando productos...</p>
+              </div>
+            ) : filteredProducts.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-gray-600 text-lg">No se encontraron productos</p>
                 <p className="text-gray-500 mt-2">Intenta ajustar los filtros de búsqueda</p>
               </div>
             ) : (
               <>
-                <div className={viewMode === 'grid' 
+                <div className={`${viewMode === 'grid' 
                   ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
-                  : 'space-y-4'
+                  : 'space-y-4'} ${loading ? 'opacity-50 pointer-events-none' : ''}`
                 }>
                   {filteredProducts.map((product, index) => (
                     <ProductCard
@@ -305,6 +405,7 @@ export default function CatalogoPage() {
                       viewMode={viewMode}
                       onAddToCart={handleAddToCart}
                       priority={index < 3}
+                      pricingConfig={pricingConfig}
                     />
                   ))}
                 </div>

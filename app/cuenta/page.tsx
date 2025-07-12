@@ -5,9 +5,27 @@ import { signOut } from 'next-auth/react'
 import { Header } from '@/components/layouts/header'
 import { User, ShoppingBag, Heart, MapPin, LogOut, Shield, Percent } from 'lucide-react'
 import Link from 'next/link'
+import { useState, useEffect } from 'react'
 
 export default function AccountPage() {
   const { user, isLoading, isAssociate, isAdmin } = useAuth()
+  const [associateDiscount, setAssociateDiscount] = useState(20)
+
+  // Obtener descuento de asociados de la configuración
+  useEffect(() => {
+    const fetchAssociateDiscount = async () => {
+      try {
+        const response = await fetch('/api/admin/configuration')
+        if (response.ok) {
+          const data = await response.json()
+          setAssociateDiscount(data.data?.associateDiscount || 20)
+        }
+      } catch (error) {
+        console.error('Error fetching associate discount:', error)
+      }
+    }
+    fetchAssociateDiscount()
+  }, [])
 
   if (isLoading) {
     return (
@@ -41,7 +59,7 @@ export default function AccountPage() {
                   {isAssociate && (
                     <div className="inline-flex items-center px-3 py-1 bg-bloom-secondary/10 text-bloom-secondary rounded-full text-sm font-medium mt-2">
                       <Percent className="w-4 h-4 mr-1" />
-                      Usuario Asociado - 20% descuento
+                      Usuario Asociado - {associateDiscount}% descuento
                     </div>
                   )}
                   {isAdmin && (
@@ -111,7 +129,7 @@ export default function AccountPage() {
               <ul className="space-y-3 mb-6">
                 <li className="flex items-center">
                   <Percent className="w-5 h-5 mr-3 flex-shrink-0" />
-                  <span>20% de descuento en todos los productos</span>
+                  <span>{associateDiscount}% de descuento en todos los productos</span>
                 </li>
                 <li className="flex items-center">
                   <ShoppingBag className="w-5 h-5 mr-3 flex-shrink-0" />

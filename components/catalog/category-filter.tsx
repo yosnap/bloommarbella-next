@@ -24,10 +24,18 @@ export function CategoryFilter({ selectedCategories, onCategoryChange }: Categor
   const [loading, setLoading] = useState(true)
   const [expandedGrupos, setExpandedGrupos] = useState<string[]>([])
   const [showAllCategories, setShowAllCategories] = useState<Record<string, boolean>>({})
+  const [isExpanded, setIsExpanded] = useState(false) // Acordeón principal (colapsado por defecto)
 
   useEffect(() => {
     fetchGrupos()
   }, [])
+
+  // Expandir automáticamente si hay filtros activos
+  useEffect(() => {
+    if (selectedCategories.length > 0 && !isExpanded) {
+      setIsExpanded(true)
+    }
+  }, [selectedCategories.length])
 
   const fetchGrupos = async () => {
     try {
@@ -88,9 +96,31 @@ export function CategoryFilter({ selectedCategories, onCategoryChange }: Categor
   }
 
   return (
-    <div className="mb-6">
-      <h3 className="text-sm font-medium text-gray-700 mb-3">Categorías</h3>
-      <div className="space-y-3">
+    <div className="mb-6 border border-gray-200 rounded-lg">
+      {/* Header del acordeón */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
+      >
+        <h3 className="text-sm font-medium text-gray-700">
+          Categorías
+          {selectedCategories.length > 0 && (
+            <span className="ml-2 text-xs bg-[#183a1d] text-white px-2 py-0.5 rounded-full">
+              {selectedCategories.length}
+            </span>
+          )}
+        </h3>
+        {isExpanded ? (
+          <ChevronDown className="h-5 w-5 text-gray-500" />
+        ) : (
+          <ChevronRight className="h-5 w-5 text-gray-500" />
+        )}
+      </button>
+      
+      {/* Contenido del acordeón */}
+      {isExpanded && (
+        <div className="px-4 pb-4">
+          <div className="space-y-3">
         {grupos.map((grupo) => (
           <div key={grupo.name} className="space-y-2">
             {/* Main Grupo */}
@@ -176,16 +206,18 @@ export function CategoryFilter({ selectedCategories, onCategoryChange }: Categor
             )}
           </div>
         ))}
-      </div>
+          </div>
 
-      {/* Clear filters button */}
-      {selectedCategories.length > 0 && (
-        <button
-          onClick={() => onCategoryChange([])}
-          className="mt-4 text-sm text-[#183a1d] hover:text-[#2a5530] font-medium"
-        >
-          Limpiar filtros ({selectedCategories.length})
-        </button>
+          {/* Clear filters button */}
+          {selectedCategories.length > 0 && (
+            <button
+              onClick={() => onCategoryChange([])}
+              className="mt-4 text-sm text-[#183a1d] hover:text-[#2a5530] font-medium"
+            >
+              Limpiar filtros ({selectedCategories.length})
+            </button>
+          )}
+        </div>
       )}
     </div>
   )

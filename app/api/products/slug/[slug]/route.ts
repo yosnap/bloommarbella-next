@@ -107,7 +107,14 @@ export async function GET(
                    hybridProduct.stockStatus === 'low_stock' ? 'Stock limitado' : 'Disponible',
       }
 
-      return NextResponse.json(transformedProduct)
+      return NextResponse.json({
+        ...transformedProduct,
+        config: {
+          priceMultiplier,
+          associateDiscount: associateDiscount / 100,
+          vatRate: 0.21
+        }
+      })
     } catch (error) {
       console.error('Error getting real-time data, using base data:', error)
       
@@ -149,7 +156,14 @@ export async function GET(
                    product.stock < 5 ? 'Stock limitado' : 'Disponible',
       }
 
-      return NextResponse.json(fallbackProduct)
+      return NextResponse.json({
+        ...fallbackProduct,
+        config: {
+          priceMultiplier,
+          associateDiscount: associateDiscount / 100,
+          vatRate: 0.21
+        }
+      })
     }
   } catch (error) {
     console.error('Error fetching product by slug:', error)

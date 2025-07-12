@@ -4,14 +4,37 @@ import { useAuth } from '@/contexts/auth-context'
 import { Header } from '@/components/layouts/header'
 import { ArrowLeft, Heart, Trash2 } from 'lucide-react'
 import Link from 'next/link'
-import { useFavorites } from '@/hooks/use-favorites'
+import { useFavorites } from '@/contexts/favorites-context'
 import { useUserPricing } from '@/hooks/use-user-pricing'
 import { ProductCard } from '@/components/products/product-card'
+import { useState, useEffect } from 'react'
 
 export default function FavoritosPage() {
   const { user, isLoading, isAuthenticated } = useAuth()
   const { favorites, loading: favoritesLoading, removeFromFavorites, favoriteIds } = useFavorites()
   const { userRole } = useUserPricing()
+  const [pricingConfig, setPricingConfig] = useState<{priceMultiplier: number, associateDiscount: number, vatRate: number} | null>(null)
+
+  // Obtener configuración de precios
+  useEffect(() => {
+    const fetchPricingConfig = async () => {
+      try {
+        const response = await fetch('/api/admin/configuration')
+        if (response.ok) {
+          const data = await response.json()
+          const { priceMultiplier, associateDiscount } = data.data
+          setPricingConfig({
+            priceMultiplier: priceMultiplier || 2.5,
+            associateDiscount: (associateDiscount || 20) / 100,
+            vatRate: 0.21
+          })
+        }
+      } catch (error) {
+        console.error('Error fetching pricing config:', error)
+      }
+    }
+    fetchPricingConfig()
+  }, [])
 
   const handleAddToCart = (product: any) => {
     // TODO: Implementar lógica del carrito
@@ -122,6 +145,7 @@ export default function FavoritosPage() {
                       onAddToCart={handleAddToCart}
                       viewMode="grid"
                       priority={index < 3}
+                      pricingConfig={pricingConfig}
                     />
                     <button
                       onClick={() => handleRemoveFromFavorites(favorite.product.id, favorite.product.name)}

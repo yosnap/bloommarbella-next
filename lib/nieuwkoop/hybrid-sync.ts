@@ -137,6 +137,7 @@ export class HybridSync {
     filters: {
       category?: string
       categories?: string[]
+      brands?: string[]
       search?: string
       page?: number
       limit?: number
@@ -144,7 +145,10 @@ export class HybridSync {
       sortOrder?: string
     } = {}
   ) {
-    const { category, categories, search, page = 1, limit = 20, sortBy = 'name', sortOrder = 'asc' } = filters
+    const { category, categories, brands, search, page = 1, limit = 20, sortBy = 'name', sortOrder = 'asc' } = filters
+
+    // Convertir nombres de categorías de español a inglés para la consulta
+    const convertedCategories = categories ? await this.convertCategoriesToOriginal(categories) : undefined
 
     // 1. Obtener productos base de MongoDB
     const where: any = { active: true }
@@ -154,10 +158,10 @@ export class HybridSync {
     }
     
     // Support for multiple categories (includes subcategories)
-    if (categories && categories.length > 0) {
+    if (convertedCategories && convertedCategories.length > 0) {
       where.OR = [
-        { category: { in: categories } },
-        { subcategory: { in: categories } }
+        { category: { in: convertedCategories } },
+        { subcategory: { in: convertedCategories } }
       ]
     }
     
@@ -205,14 +209,54 @@ export class HybridSync {
         orderBy = { name: 'asc' }
     }
 
-    const products = await prisma.product.findMany({
-      where,
-      skip: (page - 1) * limit,
-      take: limit,
-      orderBy
-    })
+    // Si hay filtro de marcas, necesitamos obtener más productos porque el filtro se aplica en memoria
+    let products: any[]
+    if (brands && brands.length > 0) {
+      // Para filtros de marca, obtenemos solo los IDs y specifications primero
+      const allProductsForFiltering = await prisma.product.findMany({
+        where,
+        select: { id: true, sku: true, specifications: true },
+        orderBy
+      })
+      
+      // Filtrar en memoria para obtener solo IDs de productos que coinciden con las marcas
+      const matchingProductIds = allProductsForFiltering
+        .filter(product => {
+          if (product.specifications && typeof product.specifications === 'object') {
+            const spec = product.specifications as any
+            if (spec.tags && Array.isArray(spec.tags)) {
+              return spec.tags.some((tag: any) => 
+                tag.code === 'Brand' && brands.includes(tag.value)
+              )
+            }
+          }
+          return false
+        })
+        .map(p => p.id)
+      
+      // Ahora obtener los productos completos solo para los que coinciden, con paginación
+      const skip = (page - 1) * limit
+      const matchingIds = matchingProductIds.slice(skip, skip + limit)
+      
+      if (matchingIds.length > 0) {
+        products = await prisma.product.findMany({
+          where: { id: { in: matchingIds } },
+          orderBy
+        })
+      } else {
+        products = []
+      }
+    } else {
+      // Sin filtro de marca, paginación normal
+      products = await prisma.product.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy
+      })
+    }
 
-    // 2. Obtener datos en tiempo real para cada producto
+    // 2. Obtener datos en tiempo real para cada producto (solo para los productos paginados)
     const productsWithRealtimeData = await Promise.all(
       products.map(async (product) => {
         try {
@@ -242,12 +286,13 @@ export class HybridSync {
       })
     )
     
-    // 3. Aplicar filtros adicionales si es necesario
+    // 3. Los productos ya están filtrados por marca si es necesario
+    let filteredProducts = productsWithRealtimeData
     
     // 4. Ordenamiento especial para ofertas (en memoria)
-    let finalProducts = productsWithRealtimeData
+    let finalProducts = filteredProducts
     if (sortBy === 'offer') {
-      finalProducts = productsWithRealtimeData.sort((a, b) => {
+      finalProducts = filteredProducts.sort((a, b) => {
         const aIsOffer = a.specifications && typeof a.specifications === 'object' && (a.specifications as any).isOffer === true
         const bIsOffer = b.specifications && typeof b.specifications === 'object' && (b.specifications as any).isOffer === true
         
@@ -260,15 +305,44 @@ export class HybridSync {
       })
     }
 
-    // Calcular el total real considerando el filtro de stock
-    const totalCount = await prisma.product.count({ where })
+    // 5. La paginación ya se aplicó en la consulta anterior
+
+    // Calcular el total real considerando todos los filtros
+    let totalCount: number
+    if (brands && brands.length > 0) {
+      // Para marcas, el total ya se calculó en la lógica anterior
+      // Necesitamos contar todos los productos que cumplan el filtro
+      const allFilteredProducts = await prisma.product.findMany({
+        where,
+        select: { id: true, specifications: true }
+      })
+      
+      const brandFilteredProducts = allFilteredProducts.filter(product => {
+        if (product.specifications && typeof product.specifications === 'object') {
+          const spec = product.specifications as any
+          if (spec.tags && Array.isArray(spec.tags)) {
+            return spec.tags.some((tag: any) => 
+              tag.code === 'Brand' && brands.includes(tag.value)
+            )
+          }
+        }
+        return false
+      })
+      
+      totalCount = brandFilteredProducts.length
+    } else {
+      totalCount = await prisma.product.count({ where })
+    }
     
     return {
       products: finalProducts,
       pagination: {
         page,
         limit,
-        total: totalCount
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        hasNextPage: page * limit < totalCount,
+        hasPrevPage: page > 1
       }
     }
   }
@@ -478,6 +552,112 @@ export class HybridSync {
     if (stock === 0) return 'out_of_stock'
     if (stock < 5) return 'low_stock'
     return 'in_stock'
+  }
+
+  /**
+   * Obtener conteos de filtros para la consulta actual
+   */
+  async getFilterCounts(filters: {
+    category?: string
+    categories?: string[]
+    brands?: string[]
+    search?: string
+  }) {
+    const { category, categories, brands, search } = filters
+
+    // Convertir nombres de categorías de español a inglés para la consulta
+    const convertedCategories = categories ? await this.convertCategoriesToOriginal(categories) : undefined
+
+    // Construir el where base (igual que en getProductsWithRealtimeData)
+    const where: any = { active: true }
+    
+    if (category) {
+      where.category = category
+    }
+    
+    if (convertedCategories && convertedCategories.length > 0) {
+      where.OR = [
+        { category: { in: convertedCategories } },
+        { subcategory: { in: convertedCategories } }
+      ]
+    }
+    
+    if (search) {
+      const searchCondition = {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+          { sku: { contains: search, mode: 'insensitive' } }
+        ]
+      }
+      
+      if (where.OR) {
+        where.AND = [
+          { OR: where.OR },
+          searchCondition
+        ]
+        delete where.OR
+      } else {
+        where.OR = searchCondition.OR
+      }
+    }
+
+    // Obtener todos los productos que coinciden con los filtros actuales (excepto marcas)
+    const allProducts = await prisma.product.findMany({
+      where,
+      select: { id: true, category: true, subcategory: true, specifications: true }
+    })
+
+    // Calcular conteos de categorías
+    const categoryCounts: Record<string, number> = {}
+    const brandCounts: Record<string, number> = {}
+
+    allProducts.forEach(product => {
+      // Contar categorías
+      if (product.category) {
+        categoryCounts[product.category] = (categoryCounts[product.category] || 0) + 1
+      }
+      if (product.subcategory) {
+        categoryCounts[product.subcategory] = (categoryCounts[product.subcategory] || 0) + 1
+      }
+
+      // Contar marcas
+      if (product.specifications && typeof product.specifications === 'object') {
+        const spec = product.specifications as any
+        if (spec.tags && Array.isArray(spec.tags)) {
+          spec.tags.forEach((tag: any) => {
+            if (tag.code === 'Brand' && tag.value) {
+              brandCounts[tag.value] = (brandCounts[tag.value] || 0) + 1
+            }
+          })
+        }
+      }
+    })
+
+    return {
+      categories: Object.entries(categoryCounts).map(([name, count]) => ({ name, count })),
+      brands: Object.entries(brandCounts).map(([name, count]) => ({ name, count }))
+    }
+  }
+
+  /**
+   * Convierte nombres de categorías de español a inglés para consultas de base de datos
+   */
+  private async convertCategoriesToOriginal(categories: string[]): Promise<string[]> {
+    const categoryMap: Record<string, string> = {
+      'Material': 'Hardware',
+      'Plantas': 'Planten',
+      'Macetas': 'Potten',
+      'Jardín': 'Tuinen',
+      'Plantas Artificiales': 'Artificial ',
+      'Decoración': 'Decoration',
+      'Equipos y Accesorios': 'Equipments and accessories',
+      'Paredes Verdes': 'Green walls',
+      'Jardineras': 'Jardineras',
+      'Maceteros': 'Planters'
+    }
+
+    return categories.map(category => categoryMap[category] || category)
   }
 
   /**

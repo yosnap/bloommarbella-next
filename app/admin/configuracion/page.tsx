@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Header } from '@/components/layouts/header'
-import { Save, Settings, DollarSign, Users, Clock, Tag } from 'lucide-react'
+import { Save, Settings, DollarSign, Users, Clock, Tag, MessageCircle } from 'lucide-react'
 
 interface Configuration {
   priceMultiplier: number
@@ -15,6 +15,10 @@ interface Configuration {
   enableCache: boolean
   cacheTime: number
   newBadgeDays: number
+  whatsappEnabled: boolean
+  whatsappNumber: string
+  whatsappContactName: string
+  whatsappMessage: string
 }
 
 export default function ConfigurationPage() {
@@ -28,7 +32,11 @@ export default function ConfigurationPage() {
     maxStockAlert: 100,
     enableCache: true,
     cacheTime: 30,
-    newBadgeDays: 30
+    newBadgeDays: 30,
+    whatsappEnabled: true,
+    whatsappNumber: '34952123456',
+    whatsappContactName: 'Elisabeth',
+    whatsappMessage: 'Hola {contactName}, me interesa el producto "{productName}" cuyo enlace es: {productUrl}. ¿Me podrías dar información para realizar la compra?'
   })
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
@@ -275,6 +283,88 @@ export default function ConfigurationPage() {
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Productos dados de alta en Nieuwkoop hace menos de estos días mostrarán el badge "Nuevo"
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Configuración de WhatsApp */}
+            <div className="bg-gray-50 rounded-lg p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <MessageCircle className="h-5 w-5 text-[#f0a04b]" />
+                <h2 className="text-lg font-semibold text-gray-900">Configuración de WhatsApp</h2>
+              </div>
+              
+              <div className="space-y-6">
+                {/* Habilitar WhatsApp */}
+                <div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="whatsappEnabled"
+                      checked={config.whatsappEnabled}
+                      onChange={(e) => handleInputChange('whatsappEnabled', e.target.checked)}
+                      className="h-4 w-4 text-[#183a1d] focus:ring-[#183a1d] border-gray-300 rounded"
+                    />
+                    <label htmlFor="whatsappEnabled" className="ml-2 block text-sm font-medium text-gray-700">
+                      Habilitar botón de WhatsApp en lugar del carrito
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Si está activado, se mostrará un botón de WhatsApp en lugar del botón de carrito de compras
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Número de WhatsApp
+                    </label>
+                    <input
+                      type="text"
+                      value={config.whatsappNumber}
+                      onChange={(e) => handleInputChange('whatsappNumber', e.target.value)}
+                      placeholder="34952123456"
+                      disabled={!config.whatsappEnabled}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#183a1d] disabled:bg-gray-100"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Número de WhatsApp con código de país (sin +)
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nombre de contacto
+                    </label>
+                    <input
+                      type="text"
+                      value={config.whatsappContactName}
+                      onChange={(e) => handleInputChange('whatsappContactName', e.target.value)}
+                      placeholder="Elisabeth"
+                      disabled={!config.whatsappEnabled}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#183a1d] disabled:bg-gray-100"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Nombre de la persona de contacto que aparecerá en el mensaje
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Plantilla del mensaje
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={config.whatsappMessage}
+                    onChange={(e) => handleInputChange('whatsappMessage', e.target.value)}
+                    disabled={!config.whatsappEnabled}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#183a1d] disabled:bg-gray-100"
+                    placeholder="Hola {contactName}, me interesa el producto &quot;{productName}&quot; cuyo enlace es: {productUrl}. ¿Me podrías dar información para realizar la compra?"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Variables disponibles: <code className="bg-gray-200 px-1 rounded">{'{contactName}'}</code>, <code className="bg-gray-200 px-1 rounded">{'{productName}'}</code>, <code className="bg-gray-200 px-1 rounded">{'{productUrl}'}</code>
                   </p>
                 </div>
               </div>

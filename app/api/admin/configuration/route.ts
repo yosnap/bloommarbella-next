@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { validateWhatsAppConfig } from '@/lib/whatsapp'
 
 export async function GET() {
   try {
@@ -27,7 +28,11 @@ export async function GET() {
             'max_stock_alert',
             'enable_cache',
             'cache_time',
-            'new_badge_days'
+            'new_badge_days',
+            'whatsapp_enabled',
+            'whatsapp_number',
+            'whatsapp_contact_name',
+            'whatsapp_message'
           ]
         }
       }
@@ -42,7 +47,11 @@ export async function GET() {
       maxStockAlert: 100,
       enableCache: true,
       cacheTime: 30,
-      newBadgeDays: 30
+      newBadgeDays: 30,
+      whatsappEnabled: true,
+      whatsappNumber: '34952123456',
+      whatsappContactName: 'Elisabeth',
+      whatsappMessage: 'Hola {contactName}, me interesa el producto "{productName}" cuyo enlace es: {productUrl}. ¿Me podrías dar información para realizar la compra?'
     }
 
     configurations.forEach(item => {
@@ -70,6 +79,18 @@ export async function GET() {
           break
         case 'new_badge_days':
           config.newBadgeDays = parseInt(item.value?.toString() || '30') || 30
+          break
+        case 'whatsapp_enabled':
+          config.whatsappEnabled = item.value === 'true' || item.value === true
+          break
+        case 'whatsapp_number':
+          config.whatsappNumber = item.value?.toString() || '34952123456'
+          break
+        case 'whatsapp_contact_name':
+          config.whatsappContactName = item.value?.toString() || 'Elisabeth'
+          break
+        case 'whatsapp_message':
+          config.whatsappMessage = item.value?.toString() || 'Hola {contactName}, me interesa el producto "{productName}" cuyo enlace es: {productUrl}. ¿Me podrías dar información para realizar la compra?'
           break
       }
     })
@@ -111,8 +132,30 @@ export async function POST(request: NextRequest) {
       maxStockAlert,
       enableCache,
       cacheTime,
-      newBadgeDays
+      newBadgeDays,
+      whatsappEnabled,
+      whatsappNumber,
+      whatsappContactName,
+      whatsappMessage
     } = body
+
+    // Validar configuración de WhatsApp
+    const whatsappErrors = validateWhatsAppConfig({
+      whatsappEnabled,
+      whatsappNumber,
+      whatsappContactName,
+      whatsappMessage
+    })
+
+    if (whatsappErrors.length > 0) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `Error en configuración de WhatsApp: ${whatsappErrors.join(', ')}` 
+        },
+        { status: 400 }
+      )
+    }
 
     // Update each configuration value
     const configUpdates = [
@@ -123,7 +166,11 @@ export async function POST(request: NextRequest) {
       { key: 'max_stock_alert', value: maxStockAlert.toString() },
       { key: 'enable_cache', value: enableCache.toString() },
       { key: 'cache_time', value: cacheTime.toString() },
-      { key: 'new_badge_days', value: newBadgeDays.toString() }
+      { key: 'new_badge_days', value: newBadgeDays.toString() },
+      { key: 'whatsapp_enabled', value: whatsappEnabled.toString() },
+      { key: 'whatsapp_number', value: whatsappNumber.toString() },
+      { key: 'whatsapp_contact_name', value: whatsappContactName.toString() },
+      { key: 'whatsapp_message', value: whatsappMessage.toString() }
     ]
 
     for (const config of configUpdates) {

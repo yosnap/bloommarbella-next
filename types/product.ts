@@ -63,6 +63,11 @@ export interface ProductCardProps {
   showRibbons?: boolean
   className?: string
   priority?: boolean
+  pricingConfig?: {
+    priceMultiplier: number
+    associateDiscount: number
+    vatRate: number
+  }
 }
 
 export interface ProductsResponse {

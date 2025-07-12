@@ -6,6 +6,7 @@ import { NextAuthProvider } from '@/components/providers/session-provider'
 import { AuthProvider } from '@/contexts/auth-context'
 import { PricingProvider } from '@/contexts/pricing-context'
 import { ToastProvider } from '@/contexts/toast-context'
+import { FavoritesProvider } from '@/contexts/favorites-context'
 import { ToastContainer } from '@/components/ui/toast'
 
 const inter = Inter({ 
@@ -45,8 +46,10 @@ export default function RootLayout({
           <AuthProvider>
             <PricingProvider>
               <ToastProvider>
-                {children}
-                <ToastContainer />
+                <FavoritesProvider>
+                  {children}
+                  <ToastContainer />
+                </FavoritesProvider>
               </ToastProvider>
             </PricingProvider>
           </AuthProvider>

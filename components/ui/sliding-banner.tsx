@@ -11,11 +11,28 @@ interface SlidingBannerProps {
 export function SlidingBanner({ isAssociate, onClose }: SlidingBannerProps) {
   const [isVisible, setIsVisible] = useState(true)
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0)
+  const [associateDiscount, setAssociateDiscount] = useState(20)
+
+  // Obtener descuento de asociados de la configuración
+  useEffect(() => {
+    const fetchAssociateDiscount = async () => {
+      try {
+        const response = await fetch('/api/admin/configuration')
+        if (response.ok) {
+          const data = await response.json()
+          setAssociateDiscount(data.data?.associateDiscount || 20)
+        }
+      } catch (error) {
+        console.error('Error fetching associate discount:', error)
+      }
+    }
+    fetchAssociateDiscount()
+  }, [])
 
   const messages = [
     {
       icon: <Percent className="h-4 w-4" />,
-      text: "¡Descuento Asociado Activo! 20% OFF en todos los productos"
+      text: `¡Descuento Asociado Activo! ${associateDiscount}% OFF en todos los productos`
     },
     {
       icon: <Crown className="h-4 w-4" />,

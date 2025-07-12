@@ -5,6 +5,34 @@ Todos los cambios notables en este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-01-12
+
+### ✨ Nueva Funcionalidad: Sistema de WhatsApp
+
+#### 💬 Sistema de Contacto por WhatsApp
+- ✅ Botón de WhatsApp reemplazando temporalmente el carrito de compras
+- ✅ Mensaje pre-formateado automático con información del producto
+- ✅ Configuración completa desde el panel de administración:
+  - Habilitar/deshabilitar funcionalidad
+  - Número de WhatsApp de contacto
+  - Nombre de la persona de contacto
+  - Plantilla personalizable del mensaje
+- ✅ Integración con WhatsApp Web (wa.me)
+- ✅ Validación de configuración en el backend
+- ✅ API endpoint público para obtener configuración
+- ✅ Utilidades para generación de mensajes y URLs
+
+#### 🛠️ Mejoras Técnicas
+- ✅ Nuevo archivo `/lib/whatsapp.ts` con utilidades especializadas
+- ✅ API endpoint `/api/whatsapp-config` para configuración pública
+- ✅ Validación de números de teléfono y plantillas de mensaje
+- ✅ Manejo de variables dinámicas en plantillas: `{contactName}`, `{productName}`, `{productUrl}`
+
+#### 🐛 Correcciones
+- ✅ Fix: Favoritos para usuarios anónimos ahora cargan correctamente
+- ✅ Fix: Eliminados errores 401 en ProductCard para usuarios no autenticados
+- ✅ Fix: Middleware actualizado para permitir acceso a favoritos sin login
+
 ## [1.0.0] - 2025-01-11
 
 ### 🎉 Lanzamiento Inicial - Versión Estable

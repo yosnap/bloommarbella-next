@@ -65,8 +65,14 @@ Crear una plataforma e-commerce premium para Bloom Marbella que permita:
 - Autocompletado inteligente
 - Importación/exportación masiva
 
-#### 🛒 **Sistema de Pedidos**
-- Carrito de compras (próximamente)
+#### 💬 **Sistema de Contacto por WhatsApp**
+- Botón de WhatsApp en cada producto reemplazando el carrito temporal
+- Mensaje pre-formateado con información del producto
+- Configuración admin para número, contacto y plantilla de mensaje
+- Integración directa con WhatsApp Web
+
+#### 🛒 **Sistema de Pedidos** (Próximamente)
+- Carrito de compras
 - Checkout optimizado
 - Gestión de órdenes
 - Historial de pedidos

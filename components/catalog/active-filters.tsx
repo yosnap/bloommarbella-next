@@ -5,19 +5,27 @@ import { X } from 'lucide-react'
 interface ActiveFiltersProps {
   searchTerm: string
   selectedCategories: string[]
+  selectedBrands: string[]
   onRemoveSearch: () => void
   onRemoveCategory: (category: string) => void
+  onRemoveBrand: (brand: string) => void
   onClearAll: () => void
 }
 
 export function ActiveFilters({
   searchTerm,
   selectedCategories,
+  selectedBrands,
   onRemoveSearch,
   onRemoveCategory,
+  onRemoveBrand,
   onClearAll
 }: ActiveFiltersProps) {
-  const hasActiveFilters = searchTerm || selectedCategories.length > 0
+  const hasActiveFilters = searchTerm || selectedCategories.length > 0 || selectedBrands.length > 0
+
+  const handleClearAll = () => {
+    onClearAll()
+  }
 
   if (!hasActiveFilters) return null
 
@@ -55,10 +63,26 @@ export function ActiveFilters({
           </span>
         ))}
         
+        {/* Filtros de marcas */}
+        {selectedBrands.map(brand => (
+          <span
+            key={brand}
+            className="inline-flex items-center gap-1 px-3 py-1 bg-[#183a1d] text-white text-sm rounded-full"
+          >
+            Marca: {brand}
+            <button
+              onClick={() => onRemoveBrand(brand)}
+              className="hover:bg-[#2a5530] rounded-full p-0.5 ml-1"
+            >
+              <X size={12} />
+            </button>
+          </span>
+        ))}
+        
         {/* Botón limpiar todo */}
         {hasActiveFilters && (
           <button
-            onClick={onClearAll}
+            onClick={handleClearAll}
             className="text-sm text-gray-600 hover:text-gray-800 underline"
           >
             Limpiar todo

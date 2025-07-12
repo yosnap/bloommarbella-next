@@ -159,7 +159,7 @@ function ProductCard({ product, userRole, priority = false }: ProductCardProps) 
         
         {userRole === 'ASSOCIATE' && (
           <div className="mt-2 px-3 py-1 bg-[#f0a04b] text-white rounded-full text-xs text-center">
-            Descuento Asociado: 20%
+            Descuento Asociado: {associateDiscount}%
           </div>
         )}
       </div>
@@ -170,6 +170,23 @@ function ProductCard({ product, userRole, priority = false }: ProductCardProps) 
 export default function CatalogoSimplePage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
+  const [associateDiscount, setAssociateDiscount] = useState(20)
+
+  // Obtener descuento de asociados de la configuración
+  useEffect(() => {
+    const fetchAssociateDiscount = async () => {
+      try {
+        const response = await fetch('/api/admin/configuration')
+        if (response.ok) {
+          const data = await response.json()
+          setAssociateDiscount(data.data?.associateDiscount || 20)
+        }
+      } catch (error) {
+        console.error('Error fetching associate discount:', error)
+      }
+    }
+    fetchAssociateDiscount()
+  }, [])
   
   const categories = Array.from(new Set(mockProducts.map(p => p.category)))
   

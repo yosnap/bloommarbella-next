@@ -3,18 +3,11 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
-    // Get hidden categories from configuration
-    const hiddenCategoriesConfig = await prisma.configuration.findUnique({
-      where: { key: 'hidden_categories' }
-    })
-    const hiddenCategories = hiddenCategoriesConfig?.value as string[] || []
-
-    // Get unique categories and subcategories from products
+    // Get unique categories and subcategories from products (WITHOUT filtering hidden ones)
     const categoriesData = await prisma.product.groupBy({
       by: ['category', 'subcategory'],
       where: {
         active: true
-        // Temporarily remove stock filter to see all products
       },
       _count: {
         _all: true
@@ -37,11 +30,6 @@ export async function GET() {
     categoriesData.forEach(item => {
       // Skip items without subcategory
       if (!item.subcategory) return
-
-      // Skip hidden categories and subcategories
-      if (hiddenCategories.includes(item.category) || hiddenCategories.includes(item.subcategory)) {
-        return
-      }
 
       if (!grupos[item.category]) {
         grupos[item.category] = {
@@ -75,14 +63,10 @@ export async function GET() {
     // Convert to array and add Spanish translations
     const gruposArray = Object.values(grupos).map(grupo => ({
       ...grupo,
-      name: getGrupoDisplayName(grupo.name), // Usar la traducción como name principal
-      originalName: grupo.name, // Mantener el original para referencia
       slug: grupo.name.toLowerCase().replace(/\s+/g, '-'),
       displayName: getGrupoDisplayName(grupo.name),
       categorias: grupo.categorias.map(categoria => ({
         ...categoria,
-        name: getCategoriaDisplayName(categoria.name), // Usar la traducción como name principal
-        originalName: categoria.name, // Mantener el original para referencia
         slug: categoria.name.toLowerCase().replace(/\s+/g, '-'),
         displayName: getCategoriaDisplayName(categoria.name)
       }))
@@ -98,11 +82,11 @@ export async function GET() {
       }
     })
   } catch (error: any) {
-    console.error('Categories API error:', error)
+    console.error('Admin Categories API error:', error)
     return NextResponse.json(
       { 
         success: false, 
-        error: 'Error al obtener categorías' 
+        error: 'Error al obtener categorías para administración' 
       },
       { status: 500 }
     )
@@ -125,10 +109,8 @@ function getGrupoDisplayName(grupo: string): string {
 
 function getCategoriaDisplayName(categoria: string): string {
   // Categorías son las subcategorías (ProductGroupDescription_EN)
-  // Basado en datos reales de la API de Nieuwkoop via /api/taxonomy
   const translations: Record<string, string> = {
-    // ProductGroupDescription_EN confirmados desde la API de Nieuwkoop (/api/taxonomy)
-    'All-in-1 concepts': 'Conceptos Todo en Uno', // Confirmado con SKU CC0050320
+    'All-in-1 concepts': 'Conceptos Todo en Uno',
     'Artificial ': 'Plantas Artificiales',
     'Decoration': 'Decoración', 
     'Documentation': 'Documentación',

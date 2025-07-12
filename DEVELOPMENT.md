@@ -461,7 +461,15 @@ npm run start
 - [ ] Crear sistema de referidos
 - [ ] Añadir beneficios exclusivos
 
-#### [ ] Sistema de Pedidos
+#### [✅] Sistema de Contacto por WhatsApp
+- [x] Reemplazar botón de carrito por botón de WhatsApp
+- [x] Crear utilidades para generar mensajes de WhatsApp
+- [x] Implementar configuración desde panel de administración
+- [x] Validación de números de teléfono y plantillas
+- [x] API endpoint público para configuración
+- [x] Integración con WhatsApp Web (wa.me)
+
+#### [ ] Sistema de Pedidos (Próximamente)
 - [ ] Implementar carrito de compras
 - [ ] Aplicar descuentos automáticos para asociados
 - [ ] Crear proceso de checkout
@@ -540,6 +548,19 @@ npm run start
 3. **Imágenes grandes**: Usar Next.js Image con optimización
 4. **Cálculo de precios**: Siempre calcular en servidor para evitar manipulación
 5. **Fuentes personalizadas**: Precargar Cormorant Infant para mejor rendimiento
+6. **WhatsApp en móvil**: En algunos dispositivos móviles puede abrir la app en lugar del navegador
+
+### Nuevas Funcionalidades Implementadas
+
+#### Sistema de WhatsApp
+- **Archivos principales**:
+  - `/lib/whatsapp.ts` - Utilidades para generar mensajes y URLs
+  - `/app/api/whatsapp-config/route.ts` - API público para configuración
+  - `/app/admin/configuracion/page.tsx` - Interfaz de administración
+  - `/components/products/product-card.tsx` - Integración en tarjetas de producto
+- **Configuración**: Completamente configurable desde el panel de administración
+- **Validación**: Números de teléfono y plantillas validadas en backend
+- **Variables dinámicas**: Soporte para `{contactName}`, `{productName}`, `{productUrl}`
 
 ### Enlaces Útiles
 - [Documentación Next.js](https://nextjs.org/docs)
