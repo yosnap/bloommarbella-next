@@ -2,15 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
+import { useTranslationsLegacy } from '@/hooks/use-translations'
 
 interface GrupoData {
   name: string
   count: number
-  displayName: string
   categorias: Array<{
     name: string
     count: number
-    displayName: string
   }>
 }
 
@@ -25,6 +24,7 @@ export function CategoryFilter({ selectedCategories, onCategoryChange }: Categor
   const [expandedGrupos, setExpandedGrupos] = useState<string[]>([])
   const [showAllCategories, setShowAllCategories] = useState<Record<string, boolean>>({})
   const [isExpanded, setIsExpanded] = useState(false) // Acordeón principal (colapsado por defecto)
+  const { translateTexts, getTranslation } = useTranslationsLegacy('categories')
 
   useEffect(() => {
     fetchGrupos()
@@ -42,7 +42,22 @@ export function CategoryFilter({ selectedCategories, onCategoryChange }: Categor
       const response = await fetch('/api/categories')
       if (response.ok) {
         const data = await response.json()
-        setGrupos(data.data || [])
+        const gruposData = data.data || []
+        setGrupos(gruposData)
+        
+        // Recopilar todos los textos para traducir
+        const textsToTranslate: string[] = []
+        gruposData.forEach((grupo: GrupoData) => {
+          textsToTranslate.push(grupo.name)
+          grupo.categorias.forEach(categoria => {
+            textsToTranslate.push(categoria.name)
+          })
+        })
+        
+        // Cargar traducciones
+        if (textsToTranslate.length > 0) {
+          await translateTexts(textsToTranslate)
+        }
       }
     } catch (error) {
       console.error('Error fetching grupos:', error)
@@ -152,7 +167,7 @@ export function CategoryFilter({ selectedCategories, onCategoryChange }: Categor
                       ? 'text-[#183a1d]' 
                       : 'text-gray-700'
                   }`}>
-                    {grupo.displayName}
+                    {getTranslation(grupo.name)}
                   </span>
                   <span className={`text-xs px-2 py-1 rounded-full ${
                     expandedGrupos.includes(grupo.name)
@@ -182,7 +197,7 @@ export function CategoryFilter({ selectedCategories, onCategoryChange }: Categor
                         className="w-4 h-4 text-[#183a1d] bg-gray-100 border-gray-300 rounded focus:ring-[#183a1d] focus:ring-2"
                       />
                       <span className="ml-2 text-sm text-gray-600 flex-1">
-                        {categoria.displayName}
+                        {getTranslation(categoria.name)}
                       </span>
                       <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                         {categoria.count}

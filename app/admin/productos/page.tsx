@@ -413,12 +413,6 @@ export default function ProductsManagement() {
                               </span>
                               <span className="mx-2">•</span>
                               <span>{product.category}</span>
-                              {product.subcategory && (
-                                <>
-                                  <span className="mx-2">•</span>
-                                  <span>{product.subcategory}</span>
-                                </>
-                              )}
                               <span className="mx-2">•</span>
                               <span>€{product.price.toFixed(2)}</span>
                             </div>

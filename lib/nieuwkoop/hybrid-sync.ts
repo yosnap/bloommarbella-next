@@ -143,12 +143,27 @@ export class HybridSync {
       limit?: number
       sortBy?: string
       sortOrder?: string
+      // Advanced filters
+      priceMin?: number
+      priceMax?: number
+      heightMin?: number
+      heightMax?: number
+      widthMin?: number
+      widthMax?: number
+      inStock?: boolean
+      location?: string[]
+      plantingSystem?: string[]
+      colors?: string[]
+      advancedCategories?: string[]
     } = {}
   ) {
-    const { category, categories, brands, search, page = 1, limit = 20, sortBy = 'name', sortOrder = 'asc' } = filters
+    const { 
+      category, categories, brands, search, page = 1, limit = 20, sortBy = 'name', sortOrder = 'asc',
+      priceMin, priceMax, heightMin, heightMax, widthMin, widthMax, inStock,
+      location, plantingSystem, colors, advancedCategories
+    } = filters
 
-    // Convertir nombres de categorías de español a inglés para la consulta
-    const convertedCategories = categories ? await this.convertCategoriesToOriginal(categories) : undefined
+    // Las categorías ya vienen en inglés original, usar directamente
 
     // 1. Obtener productos base de MongoDB
     const where: any = { active: true }
@@ -158,11 +173,41 @@ export class HybridSync {
     }
     
     // Support for multiple categories (includes subcategories)
-    if (convertedCategories && convertedCategories.length > 0) {
+    if (categories && categories.length > 0) {
       where.OR = [
-        { category: { in: convertedCategories } },
-        { subcategory: { in: convertedCategories } }
+        { category: { in: categories } },
+        { subcategory: { in: categories } }
       ]
+    }
+    
+    // Advanced category filter (from advanced filters)
+    if (advancedCategories && advancedCategories.length > 0) {
+      const categoryFilter = [
+        { category: { in: advancedCategories } },
+        { subcategory: { in: advancedCategories } }
+      ]
+      
+      if (where.OR) {
+        // Combine with existing OR condition
+        where.AND = [
+          { OR: where.OR },
+          { OR: categoryFilter }
+        ]
+        delete where.OR
+      } else {
+        where.OR = categoryFilter
+      }
+    }
+    
+    // Price range filter
+    if (priceMin !== undefined || priceMax !== undefined) {
+      where.basePrice = {}
+      if (priceMin !== undefined) {
+        where.basePrice.gte = priceMin / 2.5 // Convert back to base price
+      }
+      if (priceMax !== undefined) {
+        where.basePrice.lte = priceMax / 2.5 // Convert back to base price
+      }
     }
     
     if (search) {
@@ -209,49 +254,32 @@ export class HybridSync {
         orderBy = { name: 'asc' }
     }
 
-    // Si hay filtro de marcas, necesitamos obtener más productos porque el filtro se aplica en memoria
+    // Para filtros avanzados en memoria, necesitamos obtener todos los productos primero
+    const hasAdvancedFilters = inStock || 
+      (location && location.length > 0) || 
+      (colors && colors.length > 0) || 
+      (plantingSystem && plantingSystem.length > 0) ||
+      (heightMin !== undefined || heightMax !== undefined) ||
+      (widthMin !== undefined || widthMax !== undefined)
+    
+    // Limitar a máximo 20 productos por página para evitar loops infinitos
+    const maxPerPage = 20
+    const actualLimit = Math.min(limit, maxPerPage)
+    
     let products: any[]
-    if (brands && brands.length > 0) {
-      // Para filtros de marca, obtenemos solo los IDs y specifications primero
-      const allProductsForFiltering = await prisma.product.findMany({
-        where,
-        select: { id: true, sku: true, specifications: true },
-        orderBy
-      })
-      
-      // Filtrar en memoria para obtener solo IDs de productos que coinciden con las marcas
-      const matchingProductIds = allProductsForFiltering
-        .filter(product => {
-          if (product.specifications && typeof product.specifications === 'object') {
-            const spec = product.specifications as any
-            if (spec.tags && Array.isArray(spec.tags)) {
-              return spec.tags.some((tag: any) => 
-                tag.code === 'Brand' && brands.includes(tag.value)
-              )
-            }
-          }
-          return false
-        })
-        .map(p => p.id)
-      
-      // Ahora obtener los productos completos solo para los que coinciden, con paginación
-      const skip = (page - 1) * limit
-      const matchingIds = matchingProductIds.slice(skip, skip + limit)
-      
-      if (matchingIds.length > 0) {
-        products = await prisma.product.findMany({
-          where: { id: { in: matchingIds } },
-          orderBy
-        })
-      } else {
-        products = []
-      }
-    } else {
-      // Sin filtro de marca, paginación normal
+    if (brands && brands.length > 0 || hasAdvancedFilters) {
+      // Para filtros de marca o filtros avanzados, obtenemos un máximo limitado
       products = await prisma.product.findMany({
         where,
-        skip: (page - 1) * limit,
-        take: limit,
+        take: actualLimit * 10, // Máximo 10 páginas para filtrar
+        orderBy
+      })
+    } else {
+      // Sin filtros avanzados, paginación normal
+      products = await prisma.product.findMany({
+        where,
+        skip: (page - 1) * actualLimit,
+        take: actualLimit,
         orderBy
       })
     }
@@ -286,8 +314,106 @@ export class HybridSync {
       })
     )
     
-    // 3. Los productos ya están filtrados por marca si es necesario
+    // 3. Aplicar filtros en memoria (marcas y filtros avanzados)
     let filteredProducts = productsWithRealtimeData
+    
+    // Filtro de marcas
+    if (brands && brands.length > 0) {
+      filteredProducts = filteredProducts.filter(product => {
+        if (product.specifications && typeof product.specifications === 'object') {
+          const spec = product.specifications as any
+          if (spec.tags && Array.isArray(spec.tags)) {
+            return spec.tags.some((tag: any) => 
+              tag.code === 'Brand' && brands.includes(tag.value)
+            )
+          }
+        }
+        return false
+      })
+    }
+    
+    // Filtro de stock
+    if (inStock) {
+      filteredProducts = filteredProducts.filter(product => 
+        product.currentStock > 0 && product.stockStatus !== 'out_of_stock'
+      )
+    }
+    
+    // Filtros de ubicación (indoor/outdoor)
+    if (location && location.length > 0) {
+      filteredProducts = filteredProducts.filter(product => {
+        if (!product.specifications || typeof product.specifications !== 'object') return false
+        const spec = product.specifications as any
+        return location.some(loc => {
+          const locationIcon = spec.locationIcon?.toLowerCase() || ''
+          return locationIcon.includes(loc.toLowerCase())
+        })
+      })
+    }
+    
+    // Filtros de color
+    if (colors && colors.length > 0) {
+      filteredProducts = filteredProducts.filter(product => {
+        if (!product.specifications || typeof product.specifications !== 'object') return false
+        const spec = product.specifications as any
+        if (spec.tags && Array.isArray(spec.tags)) {
+          return spec.tags.some((tag: any) => 
+            tag.code === 'Colour' && colors.some(color => 
+              tag.value.toLowerCase().includes(color.toLowerCase())
+            )
+          )
+        }
+        // También buscar en la descripción del producto
+        const description = (product.description || '').toLowerCase()
+        return colors.some(color => description.includes(color.toLowerCase()))
+      })
+    }
+    
+    // Filtros de sistema de plantación
+    if (plantingSystem && plantingSystem.length > 0) {
+      filteredProducts = filteredProducts.filter(product => {
+        const description = (product.description || '').toLowerCase()
+        return plantingSystem.some(system => {
+          switch (system) {
+            case 'soil':
+              return description.includes('vulkastrat') || description.includes('soil')
+            case 'hydro':
+              return description.includes('hydro')
+            case 'artificial':
+              return description.includes('artificial') || description.includes('glued')
+            default:
+              return false
+          }
+        })
+      })
+    }
+    
+    // Filtros de dimensiones (height/width) - aplicar en memoria
+    if (heightMin !== undefined || heightMax !== undefined) {
+      filteredProducts = filteredProducts.filter(product => {
+        if (!product.specifications || typeof product.specifications !== 'object') return true
+        const spec = product.specifications as any
+        const height = spec.dimensions?.height
+        if (height === undefined || height === null) return true
+        
+        if (heightMin !== undefined && height < heightMin) return false
+        if (heightMax !== undefined && height > heightMax) return false
+        return true
+      })
+    }
+    
+    if (widthMin !== undefined || widthMax !== undefined) {
+      filteredProducts = filteredProducts.filter(product => {
+        if (!product.specifications || typeof product.specifications !== 'object') return true
+        const spec = product.specifications as any
+        const width = spec.dimensions?.width
+        if (width === undefined || width === null) return true
+        
+        if (widthMin !== undefined && width < widthMin) return false
+        if (widthMax !== undefined && width > widthMax) return false
+        return true
+      })
+    }
     
     // 4. Ordenamiento especial para ofertas (en memoria)
     let finalProducts = filteredProducts
@@ -305,43 +431,19 @@ export class HybridSync {
       })
     }
 
-    // 5. La paginación ya se aplicó en la consulta anterior
-
-    // Calcular el total real considerando todos los filtros
-    let totalCount: number
-    if (brands && brands.length > 0) {
-      // Para marcas, el total ya se calculó en la lógica anterior
-      // Necesitamos contar todos los productos que cumplan el filtro
-      const allFilteredProducts = await prisma.product.findMany({
-        where,
-        select: { id: true, specifications: true }
-      })
-      
-      const brandFilteredProducts = allFilteredProducts.filter(product => {
-        if (product.specifications && typeof product.specifications === 'object') {
-          const spec = product.specifications as any
-          if (spec.tags && Array.isArray(spec.tags)) {
-            return spec.tags.some((tag: any) => 
-              tag.code === 'Brand' && brands.includes(tag.value)
-            )
-          }
-        }
-        return false
-      })
-      
-      totalCount = brandFilteredProducts.length
-    } else {
-      totalCount = await prisma.product.count({ where })
-    }
+    // 5. Aplicar paginación después de todos los filtros en memoria
+    const totalCount = finalProducts.length
+    const skip = (page - 1) * actualLimit
+    const paginatedProducts = finalProducts.slice(skip, skip + actualLimit)
     
     return {
-      products: finalProducts,
+      products: paginatedProducts,
       pagination: {
         page,
-        limit,
+        limit: actualLimit,
         total: totalCount,
-        totalPages: Math.ceil(totalCount / limit),
-        hasNextPage: page * limit < totalCount,
+        totalPages: Math.ceil(totalCount / actualLimit),
+        hasNextPage: page * actualLimit < totalCount,
         hasPrevPage: page > 1
       }
     }
@@ -562,11 +664,26 @@ export class HybridSync {
     categories?: string[]
     brands?: string[]
     search?: string
+    // Advanced filters
+    priceMin?: number
+    priceMax?: number
+    heightMin?: number
+    heightMax?: number
+    widthMin?: number
+    widthMax?: number
+    inStock?: boolean
+    location?: string[]
+    plantingSystem?: string[]
+    colors?: string[]
+    advancedCategories?: string[]
   }) {
-    const { category, categories, brands, search } = filters
+    const { 
+      category, categories, brands, search,
+      priceMin, priceMax, heightMin, heightMax, widthMin, widthMax, inStock,
+      location, plantingSystem, colors, advancedCategories
+    } = filters
 
-    // Convertir nombres de categorías de español a inglés para la consulta
-    const convertedCategories = categories ? await this.convertCategoriesToOriginal(categories) : undefined
+    // Las categorías ya vienen en inglés original, usar directamente
 
     // Construir el where base (igual que en getProductsWithRealtimeData)
     const where: any = { active: true }
@@ -575,11 +692,41 @@ export class HybridSync {
       where.category = category
     }
     
-    if (convertedCategories && convertedCategories.length > 0) {
+    if (categories && categories.length > 0) {
       where.OR = [
-        { category: { in: convertedCategories } },
-        { subcategory: { in: convertedCategories } }
+        { category: { in: categories } },
+        { subcategory: { in: categories } }
       ]
+    }
+    
+    // Advanced category filter (from advanced filters)
+    if (advancedCategories && advancedCategories.length > 0) {
+      const categoryFilter = [
+        { category: { in: advancedCategories } },
+        { subcategory: { in: advancedCategories } }
+      ]
+      
+      if (where.OR) {
+        // Combine with existing OR condition
+        where.AND = [
+          { OR: where.OR },
+          { OR: categoryFilter }
+        ]
+        delete where.OR
+      } else {
+        where.OR = categoryFilter
+      }
+    }
+    
+    // Price range filter
+    if (priceMin !== undefined || priceMax !== undefined) {
+      where.basePrice = {}
+      if (priceMin !== undefined) {
+        where.basePrice.gte = priceMin / 2.5 // Convert back to base price
+      }
+      if (priceMax !== undefined) {
+        where.basePrice.lte = priceMax / 2.5 // Convert back to base price
+      }
     }
     
     if (search) {
@@ -602,17 +749,111 @@ export class HybridSync {
       }
     }
 
-    // Obtener todos los productos que coinciden con los filtros actuales (excepto marcas)
+    // Obtener todos los productos que coinciden con los filtros actuales
     const allProducts = await prisma.product.findMany({
       where,
-      select: { id: true, category: true, subcategory: true, specifications: true }
+      select: { id: true, category: true, subcategory: true, specifications: true, description: true, basePrice: true }
     })
 
-    // Calcular conteos de categorías
+    // Aplicar filtros avanzados en memoria (igual que en getProductsWithRealtimeData)
+    let filteredProducts = allProducts
+    
+    // Filtro de marcas
+    if (brands && brands.length > 0) {
+      filteredProducts = filteredProducts.filter(product => {
+        if (product.specifications && typeof product.specifications === 'object') {
+          const spec = product.specifications as any
+          if (spec.tags && Array.isArray(spec.tags)) {
+            return spec.tags.some((tag: any) => 
+              tag.code === 'Brand' && brands.includes(tag.value)
+            )
+          }
+        }
+        return false
+      })
+    }
+    
+    // Filtros de ubicación (indoor/outdoor)
+    if (location && location.length > 0) {
+      filteredProducts = filteredProducts.filter(product => {
+        if (!product.specifications || typeof product.specifications !== 'object') return false
+        const spec = product.specifications as any
+        return location.some(loc => {
+          const locationIcon = spec.locationIcon?.toLowerCase() || ''
+          return locationIcon.includes(loc.toLowerCase())
+        })
+      })
+    }
+    
+    // Filtros de color
+    if (colors && colors.length > 0) {
+      filteredProducts = filteredProducts.filter(product => {
+        if (!product.specifications || typeof product.specifications !== 'object') return false
+        const spec = product.specifications as any
+        if (spec.tags && Array.isArray(spec.tags)) {
+          return spec.tags.some((tag: any) => 
+            tag.code === 'Colour' && colors.some(color => 
+              tag.value.toLowerCase().includes(color.toLowerCase())
+            )
+          )
+        }
+        // También buscar en la descripción del producto
+        const description = (product.description || '').toLowerCase()
+        return colors.some(color => description.includes(color.toLowerCase()))
+      })
+    }
+    
+    // Filtros de sistema de plantación
+    if (plantingSystem && plantingSystem.length > 0) {
+      filteredProducts = filteredProducts.filter(product => {
+        const description = (product.description || '').toLowerCase()
+        return plantingSystem.some(system => {
+          switch (system) {
+            case 'soil':
+              return description.includes('vulkastrat') || description.includes('soil')
+            case 'hydro':
+              return description.includes('hydro')
+            case 'artificial':
+              return description.includes('artificial') || description.includes('glued')
+            default:
+              return false
+          }
+        })
+      })
+    }
+    
+    // Filtros de dimensiones (height/width)
+    if (heightMin !== undefined || heightMax !== undefined) {
+      filteredProducts = filteredProducts.filter(product => {
+        if (!product.specifications || typeof product.specifications !== 'object') return true
+        const spec = product.specifications as any
+        const height = spec.dimensions?.height
+        if (height === undefined || height === null) return true
+        
+        if (heightMin !== undefined && height < heightMin) return false
+        if (heightMax !== undefined && height > heightMax) return false
+        return true
+      })
+    }
+    
+    if (widthMin !== undefined || widthMax !== undefined) {
+      filteredProducts = filteredProducts.filter(product => {
+        if (!product.specifications || typeof product.specifications !== 'object') return true
+        const spec = product.specifications as any
+        const width = spec.dimensions?.width
+        if (width === undefined || width === null) return true
+        
+        if (widthMin !== undefined && width < widthMin) return false
+        if (widthMax !== undefined && width > widthMax) return false
+        return true
+      })
+    }
+
+    // Calcular conteos de categorías y marcas usando productos filtrados
     const categoryCounts: Record<string, number> = {}
     const brandCounts: Record<string, number> = {}
 
-    allProducts.forEach(product => {
+    filteredProducts.forEach(product => {
       // Contar categorías
       if (product.category) {
         categoryCounts[product.category] = (categoryCounts[product.category] || 0) + 1
@@ -640,25 +881,6 @@ export class HybridSync {
     }
   }
 
-  /**
-   * Convierte nombres de categorías de español a inglés para consultas de base de datos
-   */
-  private async convertCategoriesToOriginal(categories: string[]): Promise<string[]> {
-    const categoryMap: Record<string, string> = {
-      'Material': 'Hardware',
-      'Plantas': 'Planten',
-      'Macetas': 'Potten',
-      'Jardín': 'Tuinen',
-      'Plantas Artificiales': 'Artificial ',
-      'Decoración': 'Decoration',
-      'Equipos y Accesorios': 'Equipments and accessories',
-      'Paredes Verdes': 'Green walls',
-      'Jardineras': 'Jardineras',
-      'Maceteros': 'Planters'
-    }
-
-    return categories.map(category => categoryMap[category] || category)
-  }
 
   /**
    * Limpiar cache expirado

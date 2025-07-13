@@ -59,9 +59,9 @@ export async function GET(
       where: { key: 'delivery_time' }
     })
     
-    const priceMultiplier = priceMultiplierConfig ? parseFloat(priceMultiplierConfig.value.toString()) : 2.5
-    const associateDiscount = associateDiscountConfig ? parseInt(associateDiscountConfig.value.toString()) : 20
-    const deliveryTime = deliveryTimeConfig ? deliveryTimeConfig.value.toString() : '3-5 días laborables'
+    const priceMultiplier = priceMultiplierConfig?.value ? parseFloat(priceMultiplierConfig.value.toString()) : 2.5
+    const associateDiscount = associateDiscountConfig?.value ? parseInt(associateDiscountConfig.value.toString()) : 20
+    const deliveryTime = deliveryTimeConfig?.value ? deliveryTimeConfig.value.toString() : '3-5 días laborables'
 
     // Get real-time price and stock
     try {
@@ -77,7 +77,7 @@ export async function GET(
         ...hybridProduct,
         // Translated categories
         category: translateCategory(hybridProduct.category),
-        subcategory: translateSubcategory(hybridProduct.subcategory),
+        subcategory: hybridProduct.subcategory ? translateSubcategory(hybridProduct.subcategory) : null,
         
         // Dynamic images
         images: getProductImageUrls(hybridProduct.sku),
@@ -98,7 +98,7 @@ export async function GET(
         
         // Override delivery time with config value
         specifications: {
-          ...hybridProduct.specifications,
+          ...(typeof hybridProduct.specifications === 'object' && hybridProduct.specifications !== null ? hybridProduct.specifications : {}),
           deliveryTime: deliveryTime
         },
         
@@ -128,7 +128,7 @@ export async function GET(
         ...product,
         // Translated categories  
         category: translateCategory(product.category),
-        subcategory: translateSubcategory(product.subcategory),
+        subcategory: product.subcategory ? translateSubcategory(product.subcategory) : null,
         
         // Dynamic images
         images: getProductImageUrls(product.sku),
@@ -147,7 +147,7 @@ export async function GET(
         
         // Override delivery time with config value
         specifications: {
-          ...product.specifications,
+          ...(typeof product.specifications === 'object' && product.specifications !== null ? product.specifications : {}),
           deliveryTime: deliveryTime
         },
         

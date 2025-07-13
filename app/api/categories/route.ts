@@ -72,19 +72,13 @@ export async function GET() {
       grupo.categorias.sort((a, b) => a.name.localeCompare(b.name))
     })
 
-    // Convert to array and add Spanish translations
+    // Convert to array keeping original English names
     const gruposArray = Object.values(grupos).map(grupo => ({
       ...grupo,
-      name: getGrupoDisplayName(grupo.name), // Usar la traducción como name principal
-      originalName: grupo.name, // Mantener el original para referencia
       slug: grupo.name.toLowerCase().replace(/\s+/g, '-'),
-      displayName: getGrupoDisplayName(grupo.name),
       categorias: grupo.categorias.map(categoria => ({
         ...categoria,
-        name: getCategoriaDisplayName(categoria.name), // Usar la traducción como name principal
-        originalName: categoria.name, // Mantener el original para referencia
-        slug: categoria.name.toLowerCase().replace(/\s+/g, '-'),
-        displayName: getCategoriaDisplayName(categoria.name)
+        slug: categoria.name.toLowerCase().replace(/\s+/g, '-')
       }))
     }))
 
@@ -109,38 +103,3 @@ export async function GET() {
   }
 }
 
-function getGrupoDisplayName(grupo: string): string {
-  // Grupos son las categorías principales (MainGroupDescription_EN)
-  const translations: Record<string, string> = {
-    'Planten': 'Plantas',
-    'Hardware': 'Material',
-    'Potten': 'Macetas',
-    'Tuinen': 'Jardín',
-    'Decoratie': 'Decoración',
-    'Verzorging': 'Cuidado'
-  }
-  
-  return translations[grupo] || grupo
-}
-
-function getCategoriaDisplayName(categoria: string): string {
-  // Categorías son las subcategorías (ProductGroupDescription_EN)
-  // Basado en datos reales de la API de Nieuwkoop via /api/taxonomy
-  const translations: Record<string, string> = {
-    // ProductGroupDescription_EN confirmados desde la API de Nieuwkoop (/api/taxonomy)
-    'All-in-1 concepts': 'Conceptos Todo en Uno', // Confirmado con SKU CC0050320
-    'Artificial ': 'Plantas Artificiales',
-    'Decoration': 'Decoración', 
-    'Documentation': 'Documentación',
-    'Equipments and accessories': 'Equipos y Accesorios',
-    'Green walls': 'Paredes Verdes',
-    'Hydroculture': 'Hidrocultivos',
-    'Moss and Mummy plants ': 'Plantas de Musgo',
-    'Nutrients and pesticide': 'Nutrientes y Pesticidas',
-    'Planters': 'Macetas y Jardineras',
-    'Soilculture': 'Cultivo en Tierra',
-    'Substrates and systems': 'Sustratos y Sistemas'
-  }
-  
-  return translations[categoria] || categoria
-}

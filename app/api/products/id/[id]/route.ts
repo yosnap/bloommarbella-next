@@ -31,8 +31,15 @@ export async function GET(
     }
 
     // Obtener configuración de precios para incluir en la respuesta
-    const configuration = await prisma.configuration.findFirst()
-    const { priceMultiplier = 2.5, associateDiscount = 20 } = configuration || {}
+    const priceMultiplierConfig = await prisma.configuration.findUnique({
+      where: { key: 'price_multiplier' }
+    })
+    const associateDiscountConfig = await prisma.configuration.findUnique({
+      where: { key: 'associate_discount' }
+    })
+    
+    const priceMultiplier = priceMultiplierConfig?.value ? parseFloat(priceMultiplierConfig.value.toString()) : 2.5
+    const associateDiscount = associateDiscountConfig?.value ? parseInt(associateDiscountConfig.value.toString()) : 20
 
     return NextResponse.json({
       success: true,

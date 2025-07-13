@@ -71,7 +71,8 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       data: {
-        lastSync: lastSyncConfig?.value?.timestamp || null,
+        lastSync: (lastSyncConfig?.value && typeof lastSyncConfig.value === 'object' && 'timestamp' in lastSyncConfig.value) ? 
+          lastSyncConfig.value.timestamp : null,
         totalProducts,
         activeProducts,
         inactiveProducts: totalProducts - activeProducts

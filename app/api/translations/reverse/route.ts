@@ -12,10 +12,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Buscar la traducción que coincida con el texto traducido
+    // Buscar la traducción que coincida con el texto traducido (en español)
     const translation = await prisma.translation.findFirst({
       where: {
-        translatedText: translatedText,
+        spanishText: translatedText,
         category: category
       }
     })
@@ -23,8 +23,8 @@ export async function POST(request: NextRequest) {
     if (translation) {
       return NextResponse.json({
         success: true,
-        originalText: translation.originalText,
-        translatedText: translation.translatedText
+        originalText: translation.englishText,
+        translatedText: translation.spanishText
       })
     }
 

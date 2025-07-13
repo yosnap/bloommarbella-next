@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     // Fetch products from Nieuwkoop API to extract taxonomy
     const response = await nieuwkoopRealClient.getProducts({ 
       sysmodified: '2020-01-01', // Get all products from this date
-      count: 15000 // Increased limit to capture all products and taxonomy
+      limit: 15000 // Increased limit to capture all products and taxonomy
     })
     
     if (!response.success || !response.data) {

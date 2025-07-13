@@ -60,15 +60,13 @@ export async function GET() {
       grupo.categorias.sort((a, b) => a.name.localeCompare(b.name))
     })
 
-    // Convert to array and add Spanish translations
+    // Convert to array keeping original English names
     const gruposArray = Object.values(grupos).map(grupo => ({
       ...grupo,
       slug: grupo.name.toLowerCase().replace(/\s+/g, '-'),
-      displayName: getGrupoDisplayName(grupo.name),
       categorias: grupo.categorias.map(categoria => ({
         ...categoria,
-        slug: categoria.name.toLowerCase().replace(/\s+/g, '-'),
-        displayName: getCategoriaDisplayName(categoria.name)
+        slug: categoria.name.toLowerCase().replace(/\s+/g, '-')
       }))
     }))
 
@@ -93,36 +91,3 @@ export async function GET() {
   }
 }
 
-function getGrupoDisplayName(grupo: string): string {
-  // Grupos son las categorías principales (MainGroupDescription_EN)
-  const translations: Record<string, string> = {
-    'Planten': 'Plantas',
-    'Hardware': 'Material',
-    'Potten': 'Macetas',
-    'Tuinen': 'Jardín',
-    'Decoratie': 'Decoración',
-    'Verzorging': 'Cuidado'
-  }
-  
-  return translations[grupo] || grupo
-}
-
-function getCategoriaDisplayName(categoria: string): string {
-  // Categorías son las subcategorías (ProductGroupDescription_EN)
-  const translations: Record<string, string> = {
-    'All-in-1 concepts': 'Conceptos Todo en Uno',
-    'Artificial ': 'Plantas Artificiales',
-    'Decoration': 'Decoración', 
-    'Documentation': 'Documentación',
-    'Equipments and accessories': 'Equipos y Accesorios',
-    'Green walls': 'Paredes Verdes',
-    'Hydroculture': 'Hidrocultivos',
-    'Moss and Mummy plants ': 'Plantas de Musgo',
-    'Nutrients and pesticide': 'Nutrientes y Pesticidas',
-    'Planters': 'Macetas y Jardineras',
-    'Soilculture': 'Cultivo en Tierra',
-    'Substrates and systems': 'Sustratos y Sistemas'
-  }
-  
-  return translations[categoria] || categoria
-}

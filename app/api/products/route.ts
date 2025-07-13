@@ -15,14 +15,52 @@ export async function GET(request: NextRequest) {
 
     // Parse query parameters
     const { searchParams } = new URL(request.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100)
+    const pageParam = searchParams.get('page') || '1'
+    const limitParam = searchParams.get('limit') || '20'
+    
+    // Debug log
+    console.log('📊 API params received:', { pageParam, limitParam })
+    
+    const page = parseInt(pageParam)
+    const limit = Math.min(parseInt(limitParam), 100)
+    
+    // Validate params
+    if (isNaN(page) || page < 1) {
+      console.error('❌ Invalid page parameter:', pageParam)
+      return NextResponse.json(
+        { success: false, error: 'Invalid page parameter' },
+        { status: 400 }
+      )
+    }
+    
+    if (isNaN(limit) || limit < 1) {
+      console.error('❌ Invalid limit parameter:', limitParam)
+      return NextResponse.json(
+        { success: false, error: 'Invalid limit parameter' },
+        { status: 400 }
+      )
+    }
+    
+    console.log('✅ Parsed params:', { page, limit })
     const category = searchParams.get('category')
     const categories = searchParams.get('categories')
     const brands = searchParams.get('brands')
     const search = searchParams.get('search')
     const sortBy = searchParams.get('sortBy') || 'name'
     const sortOrder = searchParams.get('sortOrder') || 'asc'
+    
+    // Parse advanced filter parameters
+    const priceMin = searchParams.get('priceMin') ? parseFloat(searchParams.get('priceMin')!) : undefined
+    const priceMax = searchParams.get('priceMax') ? parseFloat(searchParams.get('priceMax')!) : undefined
+    const heightMin = searchParams.get('heightMin') ? parseFloat(searchParams.get('heightMin')!) : undefined
+    const heightMax = searchParams.get('heightMax') ? parseFloat(searchParams.get('heightMax')!) : undefined
+    const widthMin = searchParams.get('widthMin') ? parseFloat(searchParams.get('widthMin')!) : undefined
+    const widthMax = searchParams.get('widthMax') ? parseFloat(searchParams.get('widthMax')!) : undefined
+    const inStock = searchParams.get('inStock') === 'true'
+    const location = searchParams.get('location')?.split(',').filter(l => l.trim()) || []
+    const plantingSystem = searchParams.get('plantingSystem')?.split(',').filter(p => p.trim()) || []
+    const colors = searchParams.get('colors')?.split(',').filter(c => c.trim()) || []
+    const advancedCategories = searchParams.get('advancedCategories')?.split(',').filter(c => c.trim()) || []
 
     // Parse categories parameter (comma-separated list)
     const categoryFilters = categories ? categories.split(',').map(c => c.trim()).filter(c => c) : []
@@ -31,14 +69,26 @@ export async function GET(request: NextRequest) {
     
     // Get products with real-time data
     const result = await hybridSync.getProductsWithRealtimeData({
-      category,
+      category: category || undefined,
       categories: categoryFilters,
       brands: brandFilters,
-      search,
+      search: search || undefined,
       page,
       limit,
       sortBy,
-      sortOrder
+      sortOrder,
+      // Advanced filters
+      priceMin,
+      priceMax,
+      heightMin,
+      heightMax,
+      widthMin,
+      widthMax,
+      inStock,
+      location,
+      plantingSystem,
+      colors,
+      advancedCategories
     })
 
     // Get pricing configuration
@@ -49,8 +99,8 @@ export async function GET(request: NextRequest) {
       where: { key: 'associate_discount' }
     })
     
-    const priceMultiplier = priceMultiplierConfig ? parseFloat(priceMultiplierConfig.value.toString()) : 2.5
-    const associateDiscount = associateDiscountConfig ? parseInt(associateDiscountConfig.value.toString()) : 20
+    const priceMultiplier = priceMultiplierConfig?.value ? parseFloat(priceMultiplierConfig.value.toString()) : 2.5
+    const associateDiscount = associateDiscountConfig?.value ? parseInt(associateDiscountConfig.value.toString()) : 20
     
     // Transform products with user-specific pricing
     const transformedProducts = result.products.map(product => {
@@ -118,10 +168,22 @@ export async function GET(request: NextRequest) {
 
     // Get filter counts for the current query (without pagination)
     const filterInfo = await hybridSync.getFilterCounts({
-      category,
+      category: category || undefined,
       categories: categoryFilters,
       brands: brandFilters,
-      search
+      search: search || undefined,
+      // Advanced filters for counting
+      priceMin,
+      priceMax,
+      heightMin,
+      heightMax,
+      widthMin,
+      widthMax,
+      inStock,
+      location,
+      plantingSystem,
+      colors,
+      advancedCategories
     })
 
     return NextResponse.json({

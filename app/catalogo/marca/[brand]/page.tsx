@@ -1,37 +1,24 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import CatalogoPage from '../../page'
 
 export default function BrandPage() {
   const params = useParams()
   const router = useRouter()
-  const [initialFilters, setInitialFilters] = useState<{
-    selectedBrands: string[]
-    selectedCategories: string[]
-    searchTerm: string
-  } | null>(null)
 
   useEffect(() => {
     if (params.brand) {
-      // Convertir de URL amigable a nombre real de marca
+      // Convertir de URL amigable a nombre real de marca y redirigir
       const brandName = decodeURIComponent(params.brand as string)
         .split('-')
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ')
       
-      setInitialFilters({
-        selectedBrands: [brandName],
-        selectedCategories: [],
-        searchTerm: ''
-      })
+      router.replace(`/catalogo?brands=${encodeURIComponent(brandName)}`)
     }
-  }, [params.brand])
+  }, [params.brand, router])
 
-  if (!initialFilters) {
-    return <div>Cargando...</div>
-  }
-
-  return <CatalogoPage initialFilters={initialFilters} />
+  return <CatalogoPage />
 }

@@ -3,21 +3,21 @@
 import { useState, useEffect } from 'react'
 import { AdminHeader } from '@/components/admin/admin-header'
 import { useToast } from '@/hooks/use-toast'
+import { useTranslationsLegacy } from '@/hooks/use-translations'
 import { Eye, EyeOff, Save, RotateCcw } from 'lucide-react'
 
 interface CategoryData {
   name: string
-  displayName: string
   count: number
   categorias?: Array<{
     name: string
-    displayName: string
     count: number
   }>
 }
 
 export default function AdminCategoriasPage() {
   const { success, error } = useToast()
+  const { translateTexts, getTranslation } = useTranslationsLegacy('categories')
   const [categories, setCategories] = useState<CategoryData[]>([])
   const [hiddenCategories, setHiddenCategories] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
@@ -190,7 +190,7 @@ export default function AdminCategoriasPage() {
                           <h3 className={`text-lg font-semibold ${
                             isCategoryHidden ? 'text-gray-400 line-through' : 'text-gray-900'
                           }`}>
-                            {category.displayName}
+                            {category.name}
                           </h3>
                           <p className="text-sm text-gray-500">
                             {category.count.toLocaleString()} productos
@@ -236,7 +236,7 @@ export default function AdminCategoriasPage() {
                                   <span className={`text-sm font-medium ${
                                     isSubcategoryHidden ? 'text-gray-400 line-through' : 'text-gray-700'
                                   }`}>
-                                    {subcategory.displayName}
+                                    {subcategory.name}
                                   </span>
                                   <span className="text-xs text-gray-500 ml-2">
                                     ({subcategory.count.toLocaleString()} productos)
@@ -269,15 +269,13 @@ export default function AdminCategoriasPage() {
                 </p>
                 <div className="space-y-2">
                   {hiddenCategories.map((hiddenCategory) => {
-                    // Try to find the category in the data to get display name
-                    let displayName = hiddenCategory
+                    // Try to find the category in the data to get count
                     let productCount = 0
                     let isMainCategory = false
                     
                     // Check if it's a main category
                     const mainCategory = categories.find(cat => cat.name === hiddenCategory)
                     if (mainCategory) {
-                      displayName = mainCategory.displayName
                       productCount = mainCategory.count
                       isMainCategory = true
                     } else {
@@ -286,7 +284,6 @@ export default function AdminCategoriasPage() {
                         if (category.categorias) {
                           const subcategory = category.categorias.find(sub => sub.name === hiddenCategory)
                           if (subcategory) {
-                            displayName = subcategory.displayName
                             productCount = subcategory.count
                             break
                           }
@@ -306,7 +303,7 @@ export default function AdminCategoriasPage() {
                           </button>
                           <div>
                             <span className="text-sm font-medium text-gray-900">
-                              {displayName}
+                              {hiddenCategory}
                             </span>
                             <span className="text-xs text-gray-500 ml-2">
                               ({productCount.toLocaleString()} productos)

@@ -93,7 +93,7 @@ export default function ConfigurationPage() {
     }
   }
 
-  const handleInputChange = (field: keyof Configuration, value: number | boolean) => {
+  const handleInputChange = (field: keyof Configuration, value: number | boolean | string) => {
     setConfig(prev => ({ ...prev, [field]: value }))
   }
 

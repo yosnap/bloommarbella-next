@@ -52,9 +52,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       id: product.nieuwkoopId,
       sku: product.sku,
       name: product.name,
-      description: product.description,
+      description: product.description || undefined,
       category: product.category,
-      subcategory: product.subcategory,
+      subcategory: product.subcategory || undefined,
       price: product.basePrice,
       currency: 'EUR',
       stock: product.stock,
@@ -74,8 +74,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       where: { key: 'associate_discount' }
     })
     
-    const priceMultiplier = priceMultiplierConfig ? parseFloat(priceMultiplierConfig.value.toString()) : 2.5
-    const associateDiscount = associateDiscountConfig ? parseInt(associateDiscountConfig.value.toString()) : 20
+    const priceMultiplier = priceMultiplierConfig?.value ? parseFloat(priceMultiplierConfig.value.toString()) : 2.5
+    const associateDiscount = associateDiscountConfig?.value ? parseInt(associateDiscountConfig.value.toString()) : 20
     
     // Calculate pricing
     const pricing = calculatePrice(product.basePrice, userRole, {
@@ -136,9 +136,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         id: relatedProduct.nieuwkoopId,
         sku: relatedProduct.sku,
         name: relatedProduct.name,
-        description: relatedProduct.description,
+        description: relatedProduct.description || undefined,
         category: relatedProduct.category,
-        subcategory: relatedProduct.subcategory,
+        subcategory: relatedProduct.subcategory || undefined,
         price: relatedProduct.basePrice,
         currency: 'EUR',
         stock: relatedProduct.stock,

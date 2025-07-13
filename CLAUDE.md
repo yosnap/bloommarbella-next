@@ -144,6 +144,49 @@ Bloom Marbella es una plataforma e-commerce desarrollada con Next.js 15 que cons
 - `/lib/translations/` - Sistema de traducciones
 - `/lib/pricing.ts` - Cálculos de precios
 
+## Base de Datos MongoDB
+
+### Instalación y Configuración
+
+1. **Instalar MongoDB** (si no está instalado):
+   ```bash
+   # macOS con Homebrew
+   brew tap mongodb/brew
+   brew install mongodb-community
+   
+   # Ubuntu/Debian
+   sudo apt-get install mongodb
+   
+   # O usar MongoDB Atlas (cloud) - recomendado para producción
+   ```
+
+2. **Iniciar MongoDB local**:
+   ```bash
+   # macOS con Homebrew
+   brew services start mongodb-community
+   
+   # Linux
+   sudo systemctl start mongod
+   
+   # Verificar que está corriendo
+   mongo --eval 'db.runCommand({ connectionStatus: 1 })'
+   ```
+
+3. **Configurar conexión** en `.env`:
+   ```env
+   # Para MongoDB local
+   DATABASE_URL="mongodb://localhost:27017/bloommarbella"
+   
+   # Para MongoDB Atlas (cloud)
+   DATABASE_URL="mongodb+srv://usuario:password@cluster.mongodb.net/bloommarbella"
+   ```
+
+4. **Sincronizar esquema Prisma**:
+   ```bash
+   npx prisma generate
+   npx prisma db push
+   ```
+
 ## Comandos Útiles
 
 ```bash
@@ -155,9 +198,9 @@ npm run lint
 npm run lint:fix
 
 # Base de datos
-npx prisma db push
-npx prisma studio
-npx prisma generate
+npx prisma db push        # Sincronizar esquema con MongoDB
+npx prisma studio         # GUI para explorar/editar datos
+npx prisma generate       # Generar cliente Prisma
 
 # Build
 npm run build
@@ -165,6 +208,11 @@ npm run start
 
 # Sincronización API
 curl -X POST http://localhost:3000/api/nieuwkoop/sync
+
+# Scripts de utilidad
+npm run create-admin      # Crear usuario administrador
+npm run sync-demo        # Cargar datos de demostración
+npm run sync-real        # Sincronizar con API real
 ```
 
 ## Variables de Entorno Críticas

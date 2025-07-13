@@ -9,23 +9,14 @@ import { Search, Filter, Grid, List } from 'lucide-react'
 import { ProductCard } from '@/components/products/product-card'
 import { Product } from '@/types/product'
 import { useUserPricing } from '@/hooks/use-user-pricing'
-import { CategoryFilter } from '@/components/catalog/category-filter'
-import { BrandFilter } from '@/components/catalog/brand-filter'
+import { AdvancedFilters } from '@/components/catalog/advanced-filters'
 import { ActiveFilters } from '@/components/catalog/active-filters'
 import { Breadcrumbs } from '@/components/catalog/breadcrumbs'
 import { generateCatalogUrl, navigateToCatalog, parseFiltersFromUrl } from '@/lib/utils/url-helpers'
 
 // Interfaces y tipos ahora están en /types/product.ts
 
-interface CatalogoPageProps {
-  initialFilters?: {
-    selectedBrands: string[]
-    selectedCategories: string[]
-    searchTerm: string
-  }
-}
-
-export default function CatalogoPage({ initialFilters }: CatalogoPageProps) {
+export default function CatalogoPage() {
   const { data: session } = useSession()
   const { userRole } = useUserPricing()
   const router = useRouter()
@@ -34,10 +25,10 @@ export default function CatalogoPage({ initialFilters }: CatalogoPageProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState(initialFilters?.searchTerm || '')
+  const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialFilters?.selectedCategories || [])
-  const [selectedBrands, setSelectedBrands] = useState<string[]>(initialFilters?.selectedBrands || [])
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [showFilters, setShowFilters] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
@@ -51,6 +42,80 @@ export default function CatalogoPage({ initialFilters }: CatalogoPageProps) {
   const [itemsPerPage, setItemsPerPage] = useState(16)
   const [pricingConfig, setPricingConfig] = useState<{priceMultiplier: number, associateDiscount: number, vatRate: number} | null>(null)
   const [filterCounts, setFilterCounts] = useState<{categories: Array<{name: string, count: number}>, brands: Array<{name: string, count: number}>} | null>(null)
+  
+  // Estados para filtros avanzados
+  const [advancedFilters, setAdvancedFilters] = useState({
+    priceRange: [0, 500] as [number, number],
+    heightRange: [0, 200] as [number, number],
+    widthRange: [0, 100] as [number, number],
+    inStock: false,
+    location: [] as string[],
+    plantingSystem: [] as string[],
+    colors: [] as string[],
+    categories: [] as string[]
+  })
+
+  // Estado para controlar si es la primera carga
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
+
+  // Actualizar rangos cuando lleguen los productos (solo en la primera carga)
+  useEffect(() => {
+    if (products.length > 0 && isInitialLoad) {
+      const priceMin = Math.floor(Math.min(...products.map(p => p.basePrice * (pricingConfig?.priceMultiplier || 2.5))))
+      const priceMax = Math.ceil(Math.max(...products.map(p => p.basePrice * (pricingConfig?.priceMultiplier || 2.5))))
+      const heightMin = Math.floor(Math.min(...products.map(p => p.specifications?.height || 0)))
+      const heightMax = Math.ceil(Math.max(...products.map(p => p.specifications?.height || 200)))
+      const widthMin = Math.floor(Math.min(...products.map(p => p.specifications?.width || 0)))
+      const widthMax = Math.ceil(Math.max(...products.map(p => p.specifications?.width || 100)))
+
+      // Solo actualizar si los rangos son diferentes a los valores por defecto
+      setAdvancedFilters(prev => ({
+        ...prev,
+        priceRange: prev.priceRange[0] === 0 && prev.priceRange[1] === 500 ? [priceMin, priceMax] : prev.priceRange,
+        heightRange: prev.heightRange[0] === 0 && prev.heightRange[1] === 200 ? [heightMin, heightMax] : prev.heightRange,
+        widthRange: prev.widthRange[0] === 0 && prev.widthRange[1] === 100 ? [widthMin, widthMax] : prev.widthRange
+      }))
+      
+      setIsInitialLoad(false)
+    }
+  }, [products, pricingConfig, isInitialLoad])
+
+  // Single useEffect to handle all filter changes
+  useEffect(() => {
+    // Skip if it's the initial load with range calculation
+    if (isInitialLoad) {
+      console.log('⏭️ Skipping useEffect because isInitialLoad is true');
+      return
+    }
+
+    console.log('🔄 Filter change detected, values:', {
+      advancedFilters,
+      selectedCategories,
+      selectedBrands,
+      searchTerm,
+      sortBy,
+      sortOrder,
+      isInitialLoad
+    });
+    
+    const delayDebounce = setTimeout(() => {
+      console.log('⏰ Debounce timeout executed, calling fetchProducts(1, true)');
+      setCurrentPage(1)
+      fetchProducts(1, true)
+    }, 300) // Debounce to avoid too many requests
+
+    return () => clearTimeout(delayDebounce)
+  }, [advancedFilters, selectedCategories, selectedBrands, searchTerm, sortBy, sortOrder, isInitialLoad])
+
+  // Read URL parameters on page load
+  useEffect(() => {
+    const filters = parseFiltersFromUrl(pathname, searchParams)
+    setSelectedCategories(filters.categories)
+    setSelectedBrands(filters.brands)
+    setSearchTerm(filters.search)
+    
+    fetchProducts(1, true)
+  }, [pathname, searchParams])
   
   const filteredProducts = products.filter(product => product.active)
   
@@ -121,63 +186,82 @@ export default function CatalogoPage({ initialFilters }: CatalogoPageProps) {
     router.push('/catalogo')
   }
 
-  // Read URL parameters on page load (solo si no hay initialFilters)
-  useEffect(() => {
-    if (!initialFilters) {
-      const filters = parseFiltersFromUrl(pathname, searchParams)
-      setSelectedCategories(filters.categories)
-      setSelectedBrands(filters.brands)
-      setSearchTerm(filters.search)
-    }
-    
-    fetchProducts(1, true)
-  }, [pathname, searchParams, initialFilters])
-  
-  // useEffect para búsqueda con debounce y navegación
-  useEffect(() => {
-    const delayDebounce = setTimeout(async () => {
-      setCurrentPage(1)
-      fetchProducts(1, true)
-      
-      // Solo navegar si no es la carga inicial
-      if (!initialFilters) {
-        await navigateToFilters()
-      }
-    }, 300)
-    
-    return () => clearTimeout(delayDebounce)
-  }, [searchTerm])
-
-  // useEffect para otros filtros con navegación
-  useEffect(() => {
-    const handleFilterChange = async () => {
-      setCurrentPage(1)
-      fetchProducts(1, true)
-      
-      // Solo navegar si no es la carga inicial
-      if (!initialFilters) {
-        await navigateToFilters()
-      }
-    }
-
-    handleFilterChange()
-  }, [selectedCategories, selectedBrands, sortBy, sortOrder])
-
   const fetchProducts = async (page = 1, resetProducts = false) => {
     try {
-      setLoading(true)
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: itemsPerPage.toString(),
-        ...(selectedCategory && { category: selectedCategory }),
-        ...(selectedCategories.length > 0 && { categories: selectedCategories.join(',') }),
-        ...(selectedBrands.length > 0 && { brands: selectedBrands.join(',') }),
-        ...(searchTerm && { search: searchTerm }),
-        sortBy: sortBy,
-        sortOrder: sortOrder
+      // Validate input parameters
+      const pageNum = Number(page)
+      const limitNum = Number(itemsPerPage)
+      
+      if (isNaN(pageNum) || pageNum < 1) {
+        console.error('❌ Invalid page parameter in fetchProducts:', page)
+        return
+      }
+      
+      if (isNaN(limitNum) || limitNum < 1) {
+        console.error('❌ Invalid limit parameter in fetchProducts:', itemsPerPage)
+        return
+      }
+      
+      console.log('📊 fetchProducts called with:', { 
+        page: pageNum, 
+        limit: limitNum,
+        pageType: typeof pageNum,
+        limitType: typeof limitNum,
+        originalPage: page,
+        originalPageType: typeof page
       })
       
-      const response = await fetch(`/api/products?${params}`)
+      setLoading(true)
+      const params = new URLSearchParams({
+        page: pageNum.toString(),
+        limit: limitNum.toString(),
+        ...(selectedCategory && { category: selectedCategory.toString() }),
+        ...(selectedCategories.length > 0 && { categories: selectedCategories.join(',') }),
+        ...(selectedBrands.length > 0 && { brands: selectedBrands.join(',') }),
+        ...(searchTerm && { search: searchTerm.toString() }),
+        sortBy: sortBy.toString(),
+        sortOrder: sortOrder.toString()
+      })
+
+      // Agregar filtros avanzados
+      if (advancedFilters.priceRange[0] > 0 || advancedFilters.priceRange[1] < 500) {
+        params.append('priceMin', advancedFilters.priceRange[0].toString())
+        params.append('priceMax', advancedFilters.priceRange[1].toString())
+      }
+      
+      if (advancedFilters.heightRange[0] > 0 || advancedFilters.heightRange[1] < 200) {
+        params.append('heightMin', advancedFilters.heightRange[0].toString())
+        params.append('heightMax', advancedFilters.heightRange[1].toString())
+      }
+      
+      if (advancedFilters.widthRange[0] > 0 || advancedFilters.widthRange[1] < 100) {
+        params.append('widthMin', advancedFilters.widthRange[0].toString())
+        params.append('widthMax', advancedFilters.widthRange[1].toString())
+      }
+      
+      if (advancedFilters.inStock) {
+        params.append('inStock', 'true')
+      }
+      
+      if (advancedFilters.location.length > 0) {
+        params.append('location', advancedFilters.location.join(','))
+      }
+      
+      if (advancedFilters.plantingSystem.length > 0) {
+        params.append('plantingSystem', advancedFilters.plantingSystem.join(','))
+      }
+      
+      if (advancedFilters.colors.length > 0) {
+        params.append('colors', advancedFilters.colors.join(','))
+      }
+      
+      if (advancedFilters.categories.length > 0) {
+        params.append('advancedCategories', advancedFilters.categories.join(','))
+      }
+      
+      const finalUrl = `/api/products?${params}`
+      console.log('🌐 Making request to:', finalUrl)
+      const response = await fetch(finalUrl)
       if (!response.ok) {
         throw new Error('Error al cargar productos')
       }
@@ -237,7 +321,7 @@ export default function CatalogoPage({ initialFilters }: CatalogoPageProps) {
           <div className="text-center">
             <p className="text-red-600 mb-4">Error: {error}</p>
             <button
-              onClick={fetchProducts}
+              onClick={() => fetchProducts(1, true)}
               className="bg-[#183a1d] text-white px-6 py-2 rounded-lg hover:bg-[#2a5530] transition-colors"
             >
               Intentar nuevamente
@@ -255,11 +339,10 @@ export default function CatalogoPage({ initialFilters }: CatalogoPageProps) {
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar con filtros */}
-          <div className={`lg:w-64 ${showFilters ? 'block' : 'hidden lg:block'}`}>
-            <div className="bg-white rounded-lg shadow-md p-6 sticky top-4">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Filtros</h2>
-              
-              <div className="mb-6">
+          <div className={`lg:w-80 ${showFilters ? 'block' : 'hidden lg:block'}`}>
+            <div className="space-y-6 sticky top-4">
+              {/* Búsqueda */}
+              <div className="bg-white rounded-lg shadow-md p-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Buscar productos
                 </label>
@@ -274,16 +357,12 @@ export default function CatalogoPage({ initialFilters }: CatalogoPageProps) {
                   />
                 </div>
               </div>
-              
-              <CategoryFilter
-                selectedCategories={selectedCategories}
-                onCategoryChange={setSelectedCategories}
-              />
-              
-              <BrandFilter
-                selectedBrands={selectedBrands}
-                onBrandChange={setSelectedBrands}
-                filterCounts={filterCounts?.brands}
+
+              {/* Filtros avanzados */}
+              <AdvancedFilters
+                filters={advancedFilters}
+                onFiltersChange={setAdvancedFilters}
+                products={products}
               />
               
               {session?.user?.role === 'ASSOCIATE' && (
@@ -405,7 +484,7 @@ export default function CatalogoPage({ initialFilters }: CatalogoPageProps) {
                       viewMode={viewMode}
                       onAddToCart={handleAddToCart}
                       priority={index < 3}
-                      pricingConfig={pricingConfig}
+                      pricingConfig={pricingConfig || undefined}
                     />
                   ))}
                 </div>
@@ -413,7 +492,12 @@ export default function CatalogoPage({ initialFilters }: CatalogoPageProps) {
                 {/* Paginación */}
                 <div className="flex justify-center items-center mt-8 space-x-2">
                   <button
-                    onClick={() => fetchProducts(currentPage - 1, true)}
+                    onClick={() => { 
+                      const prevPage = currentPage - 1;
+                      console.log('🔙 Previous page clicked:', { currentPage, prevPage });
+                      setCurrentPage(prevPage); 
+                      fetchProducts(prevPage, true);
+                    }}
                     disabled={!hasPrevPage || loading}
                     className="px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -428,7 +512,11 @@ export default function CatalogoPage({ initialFilters }: CatalogoPageProps) {
                       return (
                         <button
                           key={pageNumber}
-                          onClick={() => fetchProducts(pageNumber, true)}
+                          onClick={() => { 
+                            console.log('📄 Page number clicked:', { pageNumber, type: typeof pageNumber });
+                            setCurrentPage(pageNumber); 
+                            fetchProducts(pageNumber, true);
+                          }}
                           disabled={loading}
                           className={`px-3 py-2 text-sm font-medium rounded-lg ${
                             pageNumber === currentPage
@@ -443,7 +531,12 @@ export default function CatalogoPage({ initialFilters }: CatalogoPageProps) {
                   </div>
                   
                   <button
-                    onClick={() => fetchProducts(currentPage + 1, true)}
+                    onClick={() => { 
+                      const nextPage = currentPage + 1;
+                      console.log('▶️ Next page clicked:', { currentPage, nextPage });
+                      setCurrentPage(nextPage); 
+                      fetchProducts(nextPage, true);
+                    }}
                     disabled={!hasNextPage || loading}
                     className="px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
