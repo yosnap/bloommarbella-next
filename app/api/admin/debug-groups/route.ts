@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     // Agrupar productos por ProductGroupCode
     const groupMap = new Map<string, ProductGroupSummary>()
     
-    response.data.forEach(product => {
+    response.data?.forEach(product => {
       const groupCode = product.ProductGroupCode || 'SIN_GRUPO'
       const groupDescription = product.ProductGroupDescription_EN || 
                               product.ProductGroupDescription_NL || 
