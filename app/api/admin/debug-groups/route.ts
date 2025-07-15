@@ -100,10 +100,10 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => a.passesFilter - b.passesFilter)
 
     // Calcular estadísticas generales
-    const totalProducts = response.data.length
-    const totalPassed = response.data.filter(p => 
+    const totalProducts = response.data?.length || 0
+    const totalPassed = response.data?.filter(p => 
       p.ShowOnWebsite && p.ItemStatus === 'A' && p.IsStockItem
-    ).length
+    ).length || 0
     
     const groupsWithoutProducts = groups.filter(g => g.passesFilter === 0)
     const groupsWithProducts = groups.filter(g => g.passesFilter > 0)

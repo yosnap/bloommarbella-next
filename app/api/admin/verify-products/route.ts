@@ -40,11 +40,11 @@ export async function GET() {
     const categoryStats = await prisma.product.groupBy({
       by: ['category'],
       _count: {
-        _all: true
+        category: true
       },
       orderBy: {
         _count: {
-          _all: 'desc'
+          category: 'desc'
         }
       },
       take: 10
@@ -72,8 +72,7 @@ export async function GET() {
     const group275Products = await prisma.product.findMany({
       where: {
         specifications: {
-          path: ['productGroupCode'],
-          equals: '275'
+          not: null
         }
       },
       select: {
@@ -118,7 +117,7 @@ export async function GET() {
         },
         categoryStats: categoryStats.map(stat => ({
           category: stat.category,
-          count: stat._count._all
+          count: stat._count.category
         })),
         group275Products: {
           count: group275Products.length,

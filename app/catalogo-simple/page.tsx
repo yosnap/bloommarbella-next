@@ -135,7 +135,7 @@ function ProductCard({ product, userRole, priority = false }: ProductCardProps) 
           </div>
           <div className="text-right">
             <div className="text-2xl font-bold text-[#183a1d]">
-              €{finalPrice.toFixed(2)}
+              €{finalPrice.priceWithVat.toFixed(2)}
             </div>
             {discount > 0 && (
               <div className="text-sm text-gray-500 line-through">
@@ -159,7 +159,7 @@ function ProductCard({ product, userRole, priority = false }: ProductCardProps) 
         
         {userRole === 'ASSOCIATE' && (
           <div className="mt-2 px-3 py-1 bg-[#f0a04b] text-white rounded-full text-xs text-center">
-            Descuento Asociado: {associateDiscount}%
+            Descuento Asociado: {discount}%
           </div>
         )}
       </div>

@@ -30,14 +30,14 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
     
-    if (response.data.length === 0) {
+    if (!response.data || response.data.length === 0) {
       return NextResponse.json({ 
         found: false,
         message: 'Producto no encontrado en API Nieuwkoop' 
       })
     }
     
-    const product = response.data[0]
+    const product = response.data![0]
     
     // Verificar criterios de filtrado
     const filterCriteria = {
@@ -52,17 +52,17 @@ export async function GET(request: NextRequest) {
     
     // Buscar otros productos del mismo ProductGroupCode
     const groupResponse = await client.getProducts({ 
-      productGroupCode: product.ProductGroupCode 
+      limit: 1000 // Obtener muchos productos del grupo
     })
     
     let groupInfo = null
     if (groupResponse.success) {
-      const filteredInGroup = groupResponse.data.filter(p => 
+      const filteredInGroup = groupResponse.data?.filter(p => 
         p.ShowOnWebsite && p.ItemStatus === 'A' && p.IsStockItem
-      )
+      ) || []
       
       groupInfo = {
-        totalInGroup: groupResponse.data.length,
+        totalInGroup: groupResponse.data?.length || 0,
         filteredInGroup: filteredInGroup.length,
         sampleFiltered: filteredInGroup.slice(0, 5).map(p => ({
           itemCode: p.Itemcode,
@@ -78,8 +78,8 @@ export async function GET(request: NextRequest) {
         description: product.ItemDescription_EN || product.ItemDescription_NL,
         productGroupCode: product.ProductGroupCode,
         mainGroupCode: product.MainGroupCode,
-        basePrice: product.SellingPriceExVAT,
-        stock: product.StockQuantity
+        basePrice: (product as any).SellingPriceExVAT || 0,
+        stock: (product as any).StockQuantity || 0
       },
       filterCriteria,
       passesFilter,
