@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { Header } from '@/components/layouts/header'
@@ -16,7 +16,7 @@ import { generateCatalogUrl, navigateToCatalog, parseFiltersFromUrl } from '@/li
 
 // Interfaces y tipos ahora están en /types/product.ts
 
-export default function CatalogoPage() {
+function CatalogContent() {
   const { data: session } = useSession()
   const { userRole } = useUserPricing()
   const router = useRouter()
@@ -528,5 +528,23 @@ export default function CatalogoPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function CatalogoPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#183a1d] mx-auto mb-4"></div>
+            <p className="text-gray-600">Cargando catálogo...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <CatalogContent />
+    </Suspense>
   )
 }

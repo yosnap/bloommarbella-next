@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -11,7 +11,7 @@ interface AuthFormProps {
   mode: 'login' | 'register'
 }
 
-export function AuthForm({ mode }: AuthFormProps) {
+function AuthFormContent({ mode }: AuthFormProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
@@ -312,5 +312,27 @@ export function AuthForm({ mode }: AuthFormProps) {
         </div>
       </div>
     </div>
+  )
+}
+
+export function AuthForm({ mode }: AuthFormProps) {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-orange-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full">
+          <div className="text-center mb-8">
+            <Logo size="xl" />
+          </div>
+          <div className="bg-white py-8 px-4 shadow-xl rounded-2xl sm:px-10">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-bloom-primary mx-auto mb-4"></div>
+              <p className="text-gray-600">Cargando...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <AuthFormContent mode={mode} />
+    </Suspense>
   )
 }
