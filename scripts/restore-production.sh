@@ -9,12 +9,10 @@ if [ ! -d "./backup/bloommarbella" ]; then
 fi
 
 # Restaurar a producción
-mongorestore --host 31.97.79.180:27017 \
+mongorestore --uri "mongodb://bloom:Bloom.5050!@panel.bloommarbella.es:27017/?tls=false" \
   --db bloommarbella \
-  --username bloom \
-  --password "Bloom.5050!" \
-  --authenticationDatabase admin \
   --drop \
+  --verbose \
   ./backup/bloommarbella/
 
 echo "✅ Base de datos restaurada exitosamente"
