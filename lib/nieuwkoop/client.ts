@@ -59,15 +59,21 @@ interface ProductFilters {
 
 class NieuwkoopClient {
   private config: NieuwkoopConfig
+  private authHeader: string
 
   constructor(config: Partial<NieuwkoopConfig> = {}) {
     this.config = {
       baseURL: process.env.NIEUWKOOP_API_URL || 'https://demo-api.nieuwkoop-europe.io',
-      apiKey: process.env.NIEUWKOOP_API_KEY || 'demo_key_12345',
+      username: process.env.NIEUWKOOP_API_USER || 'demo_user',
+      password: process.env.NIEUWKOOP_API_PASSWORD || 'demo_password',
       mode: (process.env.NIEUWKOOP_API_MODE as 'demo' | 'production') || 'demo',
       timeout: 30000,
       ...config,
     }
+    
+    // Create Basic Auth header
+    const credentials = Buffer.from(`${this.config.username}:${this.config.password}`).toString('base64')
+    this.authHeader = `Basic ${credentials}`
   }
 
   private async request<T>(
@@ -89,7 +95,7 @@ class NieuwkoopClient {
         ...options,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.config.apiKey}`,
+          'Authorization': this.authHeader,
           'X-API-Version': '1.0',
           ...options.headers,
         },
