@@ -13,6 +13,7 @@
     "sync-demo": "node scripts/sync-demo-data.js",
     "sync-real": "node scripts/sync-real-simple.js",
     "create-admin": "node scripts/create-admin.js",
+    "create-admin-production": "node scripts/create-admin-production.js",
     "sync-start": "node scripts/cron-sync-fixed.js start",
     "sync-manual": "node scripts/cron-sync-fixed.js sync",
     "sync-full": "node scripts/cron-sync-fixed.js full",
