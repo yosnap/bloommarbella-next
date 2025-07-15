@@ -7,6 +7,10 @@ node_modules
 /.next/
 /out/
 
+# TypeScript
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
 # Production
 /build
 /dist
