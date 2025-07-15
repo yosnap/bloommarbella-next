@@ -535,7 +535,7 @@ export class HybridSync {
             salesPackage: nieuwkoopProduct.SalesPackage_EN || nieuwkoopProduct.SalesPackage_NL,
             leafSize: nieuwkoopProduct.LeafSize,
             quantityTrolley: nieuwkoopProduct.QuantityTrolley,
-            locationIcon: nieuwkoopProduct.LocationIcon_EN || nieuwkoopProduct.LocationIcon_NL,
+            locationIcon: (nieuwkoopProduct as any).LocationIcon_EN || (nieuwkoopProduct as any).LocationIcon_NL,
             citesListed: nieuwkoopProduct.CitesListed,
             fytoListed: nieuwkoopProduct.FytoListed,
             isOffer: nieuwkoopProduct.IsOffer,

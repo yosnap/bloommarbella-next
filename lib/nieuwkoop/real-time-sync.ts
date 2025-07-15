@@ -34,7 +34,7 @@ export class RealTimeSync {
       const stockData: StockUpdate = {
         sku,
         stock: response.data.stock,
-        price: response.data.price || 0,
+        price: (response.data as any).price || 0,
         lastChecked: new Date()
       }
 

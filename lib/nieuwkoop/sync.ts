@@ -155,18 +155,18 @@ class NieuwkoopSyncService {
       await prisma.configuration.upsert({
         where: { key: 'nieuwkoop_last_sync' },
         update: {
-          value: {
+          value: JSON.stringify({
             timestamp: new Date().toISOString(),
             result,
-          },
+          }),
           updatedAt: new Date()
         },
         create: {
           key: 'nieuwkoop_last_sync',
-          value: {
+          value: JSON.stringify({
             timestamp: new Date().toISOString(),
             result,
-          },
+          }),
           description: 'Last Nieuwkoop product sync result'
         }
       })
