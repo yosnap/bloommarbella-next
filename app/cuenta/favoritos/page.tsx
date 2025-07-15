@@ -137,25 +137,60 @@ export default function FavoritosPage() {
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {favorites.map((favorite, index) => (
-                  <div key={favorite.id} className="relative">
-                    <ProductCard
-                      product={favorite.product}
-                      userRole={userRole}
-                      onAddToCart={handleAddToCart}
-                      viewMode="grid"
-                      priority={index < 3}
-                      pricingConfig={pricingConfig}
-                    />
-                    <button
-                      onClick={() => handleRemoveFromFavorites(favorite.product.id, favorite.product.name)}
-                      className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors z-10"
-                      title="Eliminar de favoritos"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ))}
+                {favorites.map((favorite, index) => {
+                  // Transform FavoriteProduct to Product format
+                  const product = {
+                    ...favorite.product,
+                    availability: 'in_stock' as const,
+                    tags: [],
+                    displayPrice: favorite.product.basePrice,
+                    priceWithoutVat: favorite.product.basePrice,
+                    priceWithVat: favorite.product.basePrice * 1.21,
+                    showWithVat: true,
+                    originalPriceWithoutVat: favorite.product.basePrice,
+                    originalPriceWithVat: favorite.product.basePrice * 1.21,
+                    hasDiscount: false,
+                    discountPercentage: 0,
+                    formattedPrice: `€${favorite.product.basePrice.toFixed(2)}`,
+                    formattedPriceWithVat: `€${(favorite.product.basePrice * 1.21).toFixed(2)}`,
+                    formattedOriginalPrice: `€${favorite.product.basePrice.toFixed(2)}`,
+                    formattedOriginalPriceWithVat: `€${(favorite.product.basePrice * 1.21).toFixed(2)}`,
+                    isOnSale: false,
+                    saleEndDate: null,
+                    isFeatured: false,
+                    popularity: 0,
+                    isRealTimeData: false,
+                    lastPriceCheck: new Date().toISOString(),
+                    stockLastCheck: new Date().toISOString(),
+                    priceHistory: [],
+                    stockHistory: [],
+                    searchScore: 0,
+                    stockStatus: 'in_stock' as const,
+                    stockText: 'Disponible',
+                    priceText: `€${favorite.product.basePrice.toFixed(2)}`,
+                    originalPriceText: `€${favorite.product.basePrice.toFixed(2)}`
+                  }
+                  
+                  return (
+                    <div key={favorite.id} className="relative">
+                      <ProductCard
+                        product={product}
+                        userRole={userRole}
+                        onAddToCart={handleAddToCart}
+                        viewMode="grid"
+                        priority={index < 3}
+                        pricingConfig={pricingConfig || undefined}
+                      />
+                      <button
+                        onClick={() => handleRemoveFromFavorites(favorite.product.id, favorite.product.name)}
+                        className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors z-10"
+                        title="Eliminar de favoritos"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  )
+                })}
               </div>
             </>
           )}

@@ -126,12 +126,12 @@ export default function ProductPage() {
     if (product?.specifications?.tags) {
       const translateTags = async () => {
         try {
-          const translated = await translateProductTagsClient(product.specifications.tags)
+          const translated = await translateProductTagsClient(product.specifications.tags || [])
           setTranslatedTags(translated)
         } catch (error) {
           console.error('Error translating tags:', error)
           // Fallback: usar traducciones comunes del cliente
-          const fallbackTags = product.specifications.tags.map(tag => {
+          const fallbackTags = (product.specifications.tags || []).map(tag => {
             if (typeof tag === 'string') {
               return { code: 'Característica', value: tag }
             } else if (tag && typeof tag === 'object' && 'code' in tag && 'value' in tag) {
@@ -209,7 +209,7 @@ export default function ProductPage() {
   }
 
   const hasImages = product.images && product.images.length > 0
-  const isNew = isNewProduct(product.sysmodified, newBadgeDays)
+  const isNew = isNewProduct((product as any).sysmodified, newBadgeDays)
 
   return (
     <div className="min-h-screen bg-gray-50">
