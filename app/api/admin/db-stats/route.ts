@@ -73,11 +73,10 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Obtener productos con specificaciones que contengan ProductGroupCode
+    // Obtener productos con especificaciones que contengan ProductGroupCode
     const productsWithGroupCode = await prisma.product.findMany({
       where: {
         specifications: {
-          path: ['productGroupCode'],
           not: null
         }
       },
@@ -130,7 +129,7 @@ export async function GET(request: NextRequest) {
       sampleWithGroupCode: productsWithGroupCode.map(p => ({
         nieuwkoopId: p.nieuwkoopId,
         name: p.name,
-        groupCode: p.specifications?.productGroupCode || 'N/A'
+        groupCode: (p.specifications as any)?.productGroupCode || 'N/A'
       }))
     })
     
