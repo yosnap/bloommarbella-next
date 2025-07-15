@@ -58,8 +58,10 @@ class ProductTransformer {
     
     // Calculate prices based on user role
     const basePrice = product.price
-    const displayPrice = calculatePrice(basePrice, userRole)
-    const originalPrice = userRole === 'ASSOCIATE' ? calculatePrice(basePrice, 'CUSTOMER') : undefined
+    const priceResult = calculatePrice(basePrice, userRole)
+    const displayPrice = priceResult.priceWithVat
+    const originalPriceResult = userRole === 'ASSOCIATE' ? calculatePrice(basePrice, 'CUSTOMER') : null
+    const originalPrice = originalPriceResult?.priceWithVat
     
     // Calculate discount percentage for associates
     const discountPercentage = originalPrice 
@@ -236,8 +238,8 @@ class ProductTransformer {
       name: product.name,
       category: product.category,
       subcategory: product.subcategory,
-      displayPrice: calculatePrice(product.price, userRole),
-      formattedPrice: formatPrice(calculatePrice(product.price, userRole)),
+      displayPrice: calculatePrice(product.price, userRole).priceWithVat,
+      formattedPrice: formatPrice(calculatePrice(product.price, userRole).priceWithVat),
       images: product.images.slice(0, 1), // Only first image for search
       availability: product.availability,
       availabilityText: this.getAvailabilityText(product.availability, product.stock),
@@ -257,7 +259,7 @@ class ProductTransformer {
     quantity: number,
     userRole: UserRole = 'CUSTOMER'
   ) {
-    const unitPrice = calculatePrice(product.price, userRole)
+    const unitPrice = calculatePrice(product.price, userRole).priceWithVat
     const totalPrice = unitPrice * quantity
     
     return {
