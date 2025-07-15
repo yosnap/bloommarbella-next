@@ -231,10 +231,11 @@ export class NieuwkoopRealClient {
       console.log(`📊 Productos IsStockItem: ${stockItems.length}`)
       
       // Filtrar solo productos activos y visibles en web
+      // Eliminamos el filtro IsStockItem porque queremos importar todos los productos
+      // y luego decidir en base al stock real disponible
       const filteredProducts = response.data.filter(product => 
         product.ShowOnWebsite && 
-        product.ItemStatus === 'A' && 
-        product.IsStockItem
+        product.ItemStatus === 'A'
       )
       
       console.log(`📊 Productos después de filtrar (todos los criterios): ${filteredProducts.length}`)
@@ -292,12 +293,7 @@ export class NieuwkoopRealClient {
       
       return {
         success: true,
-        data: allProducts,
-        meta: {
-          totalBatches: batches.length,
-          batchSize,
-          totalProducts: allProducts.length
-        }
+        data: allProducts
       }
     } catch (error: any) {
       console.error('❌ Error en importación por lotes:', error)

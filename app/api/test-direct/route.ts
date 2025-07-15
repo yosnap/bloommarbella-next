@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+    const itemCode = searchParams.get('itemCode')
+    
     const username = 'Ground131880'
     const password = 'A18A65A2E3'
     const credentials = Buffer.from(`${username}:${password}`).toString('base64')
@@ -9,11 +12,16 @@ export async function GET() {
     console.log('🔐 Testing direct API call with credentials:', {
       username,
       password: password.substring(0, 3) + '***',
-      credentials: credentials.substring(0, 10) + '***'
+      credentials: credentials.substring(0, 10) + '***',
+      searchingFor: itemCode
     })
     
     // Test direct API call - con parámetro sysmodified requerido
-    const response = await fetch('https://customerapi.nieuwkoop-europe.com/items?sysmodified=2020-01-01', {
+    const apiUrl = itemCode 
+      ? `https://customerapi.nieuwkoop-europe.com/items?sysmodified=2020-01-01&itemcode=${itemCode}`
+      : 'https://customerapi.nieuwkoop-europe.com/items?sysmodified=2020-01-01'
+    
+    const response = await fetch(apiUrl, {
       method: 'GET',
       headers: {
         'Authorization': `Basic ${credentials}`,
@@ -51,6 +59,43 @@ export async function GET() {
         Description: data[0].Description
       } : null
     })
+    
+    // Si se busca un producto específico, mostrar información detallada
+    if (itemCode) {
+      if (!Array.isArray(data) || data.length === 0) {
+        return NextResponse.json({
+          success: true,
+          found: false,
+          message: `Producto ${itemCode} no encontrado en API Nieuwkoop`,
+          timestamp: new Date().toISOString()
+        })
+      }
+      
+      const product = data[0]
+      return NextResponse.json({
+        success: true,
+        found: true,
+        product: {
+          itemCode: product.Itemcode,
+          description: product.Description,
+          price: product.Salesprice,
+          showOnWebsite: product.ShowOnWebsite,
+          itemStatus: product.ItemStatus,
+          isStockItem: product.IsStockItem,
+          productGroupCode: product.ProductGroupCode,
+          productGroupDescription: product.ProductGroupDescription_EN || product.ProductGroupDescription_NL,
+          mainGroupCode: product.MainGroupCode,
+          mainGroupDescription: product.MainGroupDescription_EN || product.MainGroupDescription_NL,
+          filterCheck: {
+            showOnWebsite: product.ShowOnWebsite,
+            itemStatus: product.ItemStatus,
+            isStockItem: product.IsStockItem,
+            passesFilter: product.ShowOnWebsite && product.ItemStatus === 'A'
+          }
+        },
+        timestamp: new Date().toISOString()
+      })
+    }
     
     return NextResponse.json({
       success: true,

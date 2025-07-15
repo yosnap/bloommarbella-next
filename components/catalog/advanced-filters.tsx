@@ -56,7 +56,7 @@ const plantingSystemOptions = [
 ]
 
 export function AdvancedFilters({ filters, onFiltersChange, products }: AdvancedFiltersProps) {
-  const [expandedSections, setExpandedSections] = useState<string[]>(['price'])
+  const [expandedSections, setExpandedSections] = useState<string[]>(['dimensions'])
   const [categories, setCategories] = useState<CategoryData[]>([])
   const [expandedCategories, setExpandedCategories] = useState<string[]>([])
   const [categoriesLoading, setCategoriesLoading] = useState(true)
@@ -116,12 +116,10 @@ export function AdvancedFilters({ filters, onFiltersChange, products }: Advanced
   // Función para verificar si un filtro está activo
   const isFilterActive = (filterType: string) => {
     switch (filterType) {
-      case 'price':
-        return filters.priceRange[0] > priceRange.min || filters.priceRange[1] < priceRange.max
-      case 'height':
-        return filters.heightRange[0] > heightRange.min || filters.heightRange[1] < heightRange.max
-      case 'width':
-        return filters.widthRange[0] > widthRange.min || filters.widthRange[1] < widthRange.max
+      case 'dimensions':
+        return filters.priceRange[0] > priceRange.min || filters.priceRange[1] < priceRange.max ||
+               filters.heightRange[0] > heightRange.min || filters.heightRange[1] < heightRange.max ||
+               filters.widthRange[0] > widthRange.min || filters.widthRange[1] < widthRange.max
       case 'stock':
         return filters.inStock
       case 'location':
@@ -155,17 +153,13 @@ export function AdvancedFilters({ filters, onFiltersChange, products }: Advanced
 
   // Mantener acordeones abiertos cuando hay filtros activos
   useEffect(() => {
-    const activeFilters = []
+    const activeFilters: string[] = []
     
     // Verificar cada filtro individualmente
-    if (filters.priceRange[0] > priceRange.min || filters.priceRange[1] < priceRange.max) {
-      activeFilters.push('price')
-    }
-    if (filters.heightRange[0] > heightRange.min || filters.heightRange[1] < heightRange.max) {
-      activeFilters.push('height')
-    }
-    if (filters.widthRange[0] > widthRange.min || filters.widthRange[1] < widthRange.max) {
-      activeFilters.push('width')
+    if (filters.priceRange[0] > priceRange.min || filters.priceRange[1] < priceRange.max ||
+        filters.heightRange[0] > heightRange.min || filters.heightRange[1] < heightRange.max ||
+        filters.widthRange[0] > widthRange.min || filters.widthRange[1] < widthRange.max) {
+      activeFilters.push('dimensions')
     }
     if (filters.inStock) {
       activeFilters.push('stock')
@@ -250,86 +244,66 @@ export function AdvancedFilters({ filters, onFiltersChange, products }: Advanced
         </button>
       </div>
 
-      {/* Price Range */}
+      {/* Dimensions (Price, Height, Width) */}
       <div className="border border-gray-200 rounded-lg">
         <button
-          onClick={() => toggleSection('price')}
+          onClick={() => toggleSection('dimensions')}
           className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50"
         >
-          <span className="font-medium text-gray-900">Price</span>
-          {expandedSections.includes('price') ? (
+          <span className="font-medium text-gray-900">Dimensions & Price</span>
+          {expandedSections.includes('dimensions') ? (
             <ChevronDown className="h-4 w-4 text-gray-500" />
           ) : (
             <ChevronRight className="h-4 w-4 text-gray-500" />
           )}
         </button>
         
-        {expandedSections.includes('price') && (
-          <div className="px-4 pb-4">
-            <RangeSlider
-              min={priceRange.min}
-              max={priceRange.max}
-              step={5}
-              value={filters.priceRange}
-              onValueChange={(value) => updateFilters({ priceRange: value })}
-              formatLabel={formatPrice}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Height Range */}
-      <div className="border border-gray-200 rounded-lg">
-        <button
-          onClick={() => toggleSection('height')}
-          className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50"
-        >
-          <span className="font-medium text-gray-900">Height</span>
-          {expandedSections.includes('height') ? (
-            <ChevronDown className="h-4 w-4 text-gray-500" />
-          ) : (
-            <ChevronRight className="h-4 w-4 text-gray-500" />
-          )}
-        </button>
-        
-        {expandedSections.includes('height') && (
-          <div className="px-4 pb-4">
-            <RangeSlider
-              min={heightRange.min}
-              max={heightRange.max}
-              step={5}
-              value={filters.heightRange}
-              onValueChange={(value) => updateFilters({ heightRange: value })}
-              formatLabel={formatDimension}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Width Range */}
-      <div className="border border-gray-200 rounded-lg">
-        <button
-          onClick={() => toggleSection('width')}
-          className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50"
-        >
-          <span className="font-medium text-gray-900">Width</span>
-          {expandedSections.includes('width') ? (
-            <ChevronDown className="h-4 w-4 text-gray-500" />
-          ) : (
-            <ChevronRight className="h-4 w-4 text-gray-500" />
-          )}
-        </button>
-        
-        {expandedSections.includes('width') && (
-          <div className="px-4 pb-4">
-            <RangeSlider
-              min={widthRange.min}
-              max={widthRange.max}
-              step={2}
-              value={filters.widthRange}
-              onValueChange={(value) => updateFilters({ widthRange: value })}
-              formatLabel={formatDimension}
-            />
+        {expandedSections.includes('dimensions') && (
+          <div className="px-4 pb-4 space-y-6">
+            {/* Price Range */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Price
+              </label>
+              <RangeSlider
+                min={priceRange.min}
+                max={priceRange.max}
+                step={5}
+                value={filters.priceRange}
+                onValueChange={(value) => updateFilters({ priceRange: value })}
+                formatLabel={formatPrice}
+              />
+            </div>
+            
+            {/* Height Range */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Height
+              </label>
+              <RangeSlider
+                min={heightRange.min}
+                max={heightRange.max}
+                step={5}
+                value={filters.heightRange}
+                onValueChange={(value) => updateFilters({ heightRange: value })}
+                formatLabel={formatDimension}
+              />
+            </div>
+            
+            {/* Width Range */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Width
+              </label>
+              <RangeSlider
+                min={widthRange.min}
+                max={widthRange.max}
+                step={2}
+                value={filters.widthRange}
+                onValueChange={(value) => updateFilters({ widthRange: value })}
+                formatLabel={formatDimension}
+              />
+            </div>
           </div>
         )}
       </div>

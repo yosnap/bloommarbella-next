@@ -77,11 +77,7 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
     const current = getAnonymousFavorites()
     if (!current.includes(productId)) {
       setAnonymousFavorites([...current, productId])
-      setFavoriteIds(prev => {
-        const newSet = new Set([...prev, productId])
-        console.log('🔥 CONTEXT addAnonymousFavorite - New favoriteIds size:', newSet.size)
-        return newSet
-      })
+      setFavoriteIds(prev => new Set([...prev, productId]))
       
       // Cargar datos del producto y agregarlo a la lista de favoritos
       try {
@@ -109,7 +105,6 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
     setFavoriteIds(prev => {
       const newSet = new Set(prev)
       newSet.delete(productId)
-      console.log('🔥 CONTEXT removeAnonymousFavorite - New favoriteIds size:', newSet.size)
       return newSet
     })
     
@@ -120,7 +115,6 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   const loadAnonymousFavorites = async () => {
     const anonymousFavorites = getAnonymousFavorites()
     setFavoriteIds(new Set(anonymousFavorites))
-    console.log('🔥 CONTEXT loadAnonymousFavorites - size:', anonymousFavorites.length)
     
     // Cargar datos completos de productos para favoritos anónimos
     if (anonymousFavorites.length > 0) {
@@ -144,7 +138,6 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
         }
         
         setFavorites(productsData)
-        console.log('🔥 CONTEXT loadAnonymousFavorites - loaded products:', productsData.length)
       } catch (error) {
         console.error('Error loading anonymous favorites products:', error)
       } finally {
@@ -195,7 +188,6 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
       setFavorites(data.favorites || [])
       setFavoriteIds(new Set(data.favorites?.map((f: Favorite) => f.product.id) || []))
       setInitialized(true)
-      console.log('🔥 CONTEXT fetchFavorites - authenticated size:', data.favorites?.length || 0)
     } catch (error) {
       console.error('Error fetching favorites:', error)
     } finally {
@@ -225,11 +217,7 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
       const data = await response.json()
       
       setFavorites(prev => [data.favorite, ...prev])
-      setFavoriteIds(prev => {
-        const newSet = new Set([...prev, productId])
-        console.log('🔥 CONTEXT addToFavorites (authenticated) - New favoriteIds size:', newSet.size)
-        return newSet
-      })
+      setFavoriteIds(prev => new Set([...prev, productId]))
       
       success('Agregado a favoritos', productName ? `${productName} agregado a tus favoritos` : 'Producto agregado a favoritos')
       return true
@@ -263,7 +251,6 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
       setFavoriteIds(prev => {
         const newSet = new Set(prev)
         newSet.delete(productId)
-        console.log('🔥 CONTEXT removeFromFavorites (authenticated) - New favoriteIds size:', newSet.size)
         return newSet
       })
       

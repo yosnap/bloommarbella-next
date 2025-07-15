@@ -21,23 +21,34 @@ export default withAuth(
     }
 
     // Admin routes
-    if (path.startsWith('/admin') && token?.role !== 'ADMIN') {
-      return NextResponse.redirect(new URL('/auth/unauthorized', req.url))
+    if (path.startsWith('/admin')) {
+      if (!token) {
+        return NextResponse.redirect(new URL(`/auth/login?callbackUrl=${path}`, req.url))
+      }
+      if (token.role !== 'ADMIN') {
+        return NextResponse.redirect(new URL('/auth/unauthorized', req.url))
+      }
     }
 
     // Associate routes
-    if (path.startsWith('/asociados') && !['ADMIN', 'ASSOCIATE'].includes(token?.role as string)) {
-      return NextResponse.redirect(new URL('/auth/unauthorized', req.url))
+    if (path.startsWith('/asociados')) {
+      if (!token) {
+        return NextResponse.redirect(new URL(`/auth/login?callbackUrl=${path}`, req.url))
+      }
+      if (!['ADMIN', 'ASSOCIATE'].includes(token.role as string)) {
+        return NextResponse.redirect(new URL('/auth/unauthorized', req.url))
+      }
     }
 
     // User account routes (except favorites which should be accessible to anonymous users)
     if (path.startsWith('/cuenta') && !path.startsWith('/cuenta/favoritos') && !token) {
-      return NextResponse.redirect(new URL('/auth/login', req.url))
+      // Simply redirect to login with the current path as callback
+      return NextResponse.redirect(new URL(`/auth/login?callbackUrl=${path}`, req.url))
     }
   },
   {
     callbacks: {
-      authorized: ({ token }) => !!token,
+      authorized: () => true, // Let the middleware function handle authorization
     },
   }
 )

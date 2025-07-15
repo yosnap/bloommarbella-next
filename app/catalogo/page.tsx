@@ -76,7 +76,10 @@ export default function CatalogoPage() {
         widthRange: prev.widthRange[0] === 0 && prev.widthRange[1] === 100 ? [widthMin, widthMax] : prev.widthRange
       }))
       
-      setIsInitialLoad(false)
+      // Set isInitialLoad to false after a small delay to prevent the filter useEffect from triggering
+      setTimeout(() => {
+        setIsInitialLoad(false)
+      }, 100)
     }
   }, [products, pricingConfig, isInitialLoad])
 
@@ -84,22 +87,10 @@ export default function CatalogoPage() {
   useEffect(() => {
     // Skip if it's the initial load with range calculation
     if (isInitialLoad) {
-      console.log('⏭️ Skipping useEffect because isInitialLoad is true');
       return
     }
 
-    console.log('🔄 Filter change detected, values:', {
-      advancedFilters,
-      selectedCategories,
-      selectedBrands,
-      searchTerm,
-      sortBy,
-      sortOrder,
-      isInitialLoad
-    });
-    
     const delayDebounce = setTimeout(() => {
-      console.log('⏰ Debounce timeout executed, calling fetchProducts(1, true)');
       setCurrentPage(1)
       fetchProducts(1, true)
     }, 300) // Debounce to avoid too many requests
@@ -202,15 +193,6 @@ export default function CatalogoPage() {
         return
       }
       
-      console.log('📊 fetchProducts called with:', { 
-        page: pageNum, 
-        limit: limitNum,
-        pageType: typeof pageNum,
-        limitType: typeof limitNum,
-        originalPage: page,
-        originalPageType: typeof page
-      })
-      
       setLoading(true)
       const params = new URLSearchParams({
         page: pageNum.toString(),
@@ -260,7 +242,6 @@ export default function CatalogoPage() {
       }
       
       const finalUrl = `/api/products?${params}`
-      console.log('🌐 Making request to:', finalUrl)
       const response = await fetch(finalUrl)
       if (!response.ok) {
         throw new Error('Error al cargar productos')
@@ -494,7 +475,6 @@ export default function CatalogoPage() {
                   <button
                     onClick={() => { 
                       const prevPage = currentPage - 1;
-                      console.log('🔙 Previous page clicked:', { currentPage, prevPage });
                       setCurrentPage(prevPage); 
                       fetchProducts(prevPage, true);
                     }}
@@ -513,7 +493,6 @@ export default function CatalogoPage() {
                         <button
                           key={pageNumber}
                           onClick={() => { 
-                            console.log('📄 Page number clicked:', { pageNumber, type: typeof pageNumber });
                             setCurrentPage(pageNumber); 
                             fetchProducts(pageNumber, true);
                           }}
@@ -533,7 +512,6 @@ export default function CatalogoPage() {
                   <button
                     onClick={() => { 
                       const nextPage = currentPage + 1;
-                      console.log('▶️ Next page clicked:', { currentPage, nextPage });
                       setCurrentPage(nextPage); 
                       fetchProducts(nextPage, true);
                     }}

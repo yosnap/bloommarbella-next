@@ -155,8 +155,6 @@ export function Header() {
   const { showVatForAssociate, toggleVatDisplay, setIsAssociate } = usePricing()
   const { favoritesCount } = useFavorites()
   
-  // Debug log para ver si el contador se actualiza
-  console.log('🚀 Header - favoritesCount:', favoritesCount)
   
   // Actualizar el estado del contexto cuando cambie el usuario
   useEffect(() => {

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Logo } from '@/components/ui/logo'
 import { Eye, EyeOff, Mail, Lock, User, AlertCircle, Loader2 } from 'lucide-react'
@@ -13,9 +13,13 @@ interface AuthFormProps {
 
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  
+  // Get the callback URL from query params, default to /cuenta
+  const callbackUrl = searchParams.get('callbackUrl') || '/cuenta'
   
   const [formData, setFormData] = useState({
     email: '',
@@ -66,7 +70,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           throw new Error(result.error)
         }
 
-        router.push('/cuenta')
+        router.push(callbackUrl)
       } else {
         // Login
         const result = await signIn('credentials', {
@@ -79,7 +83,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           throw new Error('Email o contraseña incorrectos')
         }
 
-        router.push('/cuenta')
+        router.push(callbackUrl)
       }
     } catch (err: any) {
       setError(err.message)
