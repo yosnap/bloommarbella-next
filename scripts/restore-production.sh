@@ -8,8 +8,8 @@ if [ ! -d "./backup/bloommarbella" ]; then
     exit 1
 fi
 
-# Restaurar a producción
-mongorestore --uri "mongodb://bloom:Bloom.5050!@panel.bloommarbella.es:27017/?tls=false" \
+# Restaurar a producción (usar desde el servidor EasyPanel)
+mongorestore --uri "mongodb://bloom:Bloom.5050!@bloommarbella-mongodb:27017/?tls=false" \
   --db bloommarbella \
   --drop \
   --verbose \
