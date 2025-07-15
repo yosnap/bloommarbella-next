@@ -52,7 +52,7 @@ export function ProductCard({
   const pricing = getDisplayPrice(product.basePrice, userRole, pricingConfig, showVatForAssociate)
   
   // Verificar si el producto es nuevo
-  const isNew = isNewProduct(product.sysmodified, newBadgeDays)
+  const isNew = isNewProduct((product as any).sysmodified || null, newBadgeDays)
   
   const gridClass = viewMode === 'grid' 
     ? 'bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow'
@@ -91,7 +91,7 @@ export function ProductCard({
     if (whatsappConfig && whatsappConfig.whatsappEnabled) {
       const whatsappUrl = createWhatsAppLink(whatsappConfig, {
         name: product.name,
-        slug: product.slug
+        slug: product.slug || product.sku
       })
       window.open(whatsappUrl, '_blank')
     }

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ChevronRight, Home } from 'lucide-react'
+import { ChevronRight, Home, Package, Layers3, Tag } from 'lucide-react'
 import { translateCategory, translateSubcategory } from '@/lib/translations'
 import { useState, useEffect } from 'react'
 
@@ -71,13 +71,14 @@ export function ProductBreadcrumbs({ productName, category, subcategory }: Produ
   ]
 
   // Agregar catálogo como segundo nivel
-  breadcrumbs.push({ name: 'Catálogo', href: '/catalogo' })
+  breadcrumbs.push({ name: 'Catálogo', href: '/catalogo', icon: Package })
 
   // Agregar categoría si existe
   if (category) {
     breadcrumbs.push({ 
       name: translatedCategory, 
-      href: `/catalogo?categories=${encodeURIComponent(category)}` 
+      href: `/catalogo?categories=${encodeURIComponent(category)}`,
+      icon: Layers3
     })
   }
 
@@ -85,12 +86,13 @@ export function ProductBreadcrumbs({ productName, category, subcategory }: Produ
   if (subcategory && subcategory !== category) {
     breadcrumbs.push({ 
       name: translatedSubcategory, 
-      href: `/catalogo?categories=${encodeURIComponent(subcategory)}` 
+      href: `/catalogo?categories=${encodeURIComponent(subcategory)}`,
+      icon: Tag
     })
   }
 
   // Agregar producto actual (no clickeable)
-  breadcrumbs.push({ name: productName, href: '' })
+  breadcrumbs.push({ name: productName, href: '', icon: Package })
 
   return (
     <div className="bg-white shadow-sm">

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ChevronRight, Home } from 'lucide-react'
+import { ChevronRight, Home, Package, Search, Tag, Layers3 } from 'lucide-react'
 import { toUrlFriendly } from '@/lib/utils/url-helpers'
 
 interface BreadcrumbsProps {
@@ -16,36 +16,41 @@ export function Breadcrumbs({ searchTerm, selectedCategories = [], selectedBrand
   ]
 
   // Agregar catálogo como segundo nivel
-  breadcrumbs.push({ name: 'Catálogo', href: '/catalogo' })
+  breadcrumbs.push({ name: 'Catálogo', href: '/catalogo', icon: Package })
 
   // Agregar filtros activos con URLs amigables
   if (searchTerm) {
     const searchSlug = toUrlFriendly(searchTerm)
     breadcrumbs.push({ 
       name: `Búsqueda: "${searchTerm}"`, 
-      href: `/catalogo/search/${searchSlug}` 
+      href: `/catalogo/search/${searchSlug}`,
+      icon: Search
     })
   } else if (selectedBrands.length === 1) {
     const brandSlug = toUrlFriendly(selectedBrands[0])
     breadcrumbs.push({ 
       name: selectedBrands[0], 
-      href: `/catalogo/marca/${brandSlug}` 
+      href: `/catalogo/marca/${brandSlug}`,
+      icon: Tag
     })
   } else if (selectedCategories.length === 1) {
     const categorySlug = toUrlFriendly(selectedCategories[0])
     breadcrumbs.push({ 
       name: selectedCategories[0], 
-      href: `/catalogo/categoria/${categorySlug}` 
+      href: `/catalogo/categoria/${categorySlug}`,
+      icon: Layers3
     })
   } else if (selectedCategories.length > 1) {
     breadcrumbs.push({ 
       name: `${selectedCategories.length} categorías`, 
-      href: `/catalogo?categories=${selectedCategories.join(',')}` 
+      href: `/catalogo?categories=${selectedCategories.join(',')}`,
+      icon: Layers3
     })
   } else if (selectedBrands.length > 1) {
     breadcrumbs.push({ 
       name: `${selectedBrands.length} marcas`, 
-      href: `/catalogo?brands=${selectedBrands.join(',')}` 
+      href: `/catalogo?brands=${selectedBrands.join(',')}`,
+      icon: Tag
     })
   }
 
