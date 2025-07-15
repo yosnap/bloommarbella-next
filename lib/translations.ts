@@ -232,14 +232,14 @@ export function translateText(text: string, category: keyof typeof translations 
   if (!text) return text
   
   // Buscar traducción exacta
-  const categoryTranslations = translations[category]
+  const categoryTranslations = translations[category] as Record<string, string>
   if (categoryTranslations && categoryTranslations[text]) {
     return categoryTranslations[text]
   }
   
   // Buscar en todas las categorías
   for (const categoryKey in translations) {
-    const categoryTranslations = translations[categoryKey as keyof typeof translations]
+    const categoryTranslations = translations[categoryKey as keyof typeof translations] as Record<string, string>
     if (categoryTranslations && categoryTranslations[text]) {
       return categoryTranslations[text]
     }
