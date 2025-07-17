@@ -23,7 +23,13 @@ export async function POST(request: NextRequest) {
 
     // Leer y parsear el archivo
     const text = await file.text()
-    const backup = JSON.parse(text)
+    let backup
+    try {
+      backup = JSON.parse(text)
+    } catch (parseError) {
+      console.error('Error parseando archivo JSON:', parseError)
+      return NextResponse.json({ error: 'Archivo JSON inválido' }, { status: 400 })
+    }
 
     // Validar estructura del backup
     if (!backup.version || !backup.settings || backup.type !== 'settings') {
@@ -39,9 +45,9 @@ export async function POST(request: NextRequest) {
     // Restaurar cada configuración
     for (const [key, setting] of Object.entries(backup.settings)) {
       try {
-        // Validar que el ajuste esté en la lista permitida
-        if (!backup.metadata?.includedKeys?.includes(key)) {
-          console.warn(`⚠️ Ajuste '${key}' no está en la lista permitida, omitiendo...`)
+        // Validar que el ajuste tenga la estructura correcta
+        if (!setting || typeof setting !== 'object' || !(setting as any).value) {
+          console.warn(`⚠️ Ajuste '${key}' no tiene estructura válida, omitiendo...`)
           continue
         }
 

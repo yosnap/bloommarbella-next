@@ -25,6 +25,11 @@ export const metadata: Metadata = {
   title: 'Bloom Marbella - Premium Plants & Garden Design',
   description: 'Discover premium plants, planters, and garden design services. Your trusted partner for creating beautiful green spaces in Marbella.',
   keywords: 'plants, garden design, planters, Marbella, landscaping, indoor plants, outdoor plants',
+  icons: {
+    icon: '/images/bloom-logo.png',
+    shortcut: '/images/bloom-logo.png',
+    apple: '/images/bloom-logo.png',
+  },
 }
 
 export default function RootLayout({
