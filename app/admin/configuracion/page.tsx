@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { Header } from '@/components/layouts/header'
+import { AdminHeader } from '@/components/admin/admin-header'
 import { Save, Settings, DollarSign, Users, Clock, Tag, MessageCircle } from 'lucide-react'
 
 interface Configuration {
@@ -110,7 +110,7 @@ export default function ConfigurationPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      <AdminHeader />
       
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-lg shadow-sm">

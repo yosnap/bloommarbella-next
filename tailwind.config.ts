@@ -18,30 +18,38 @@ const config: Config = {
           secondaryLight: '#f4b56f',
           secondaryDark: '#d68a35',
         },
-        background: "white",
-        foreground: "#1f2937",
-        border: "#e5e7eb",
-        input: "#f9fafb",
-        ring: "#183a1d",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))"
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))"
+        },
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
         primary: {
-          DEFAULT: "#183a1d",
-          foreground: "white"
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))"
         },
         secondary: {
-          DEFAULT: "#f0a04b",
-          foreground: "white"
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))"
         },
         muted: {
-          DEFAULT: "#f3f4f6",
-          foreground: "#6b7280"
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))"
         },
         accent: {
-          DEFAULT: "#f3f4f6",
-          foreground: "#1f2937"
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))"
         },
         destructive: {
-          DEFAULT: "#ef4444",
-          foreground: "white"
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))"
         },
       },
       fontFamily: {

@@ -364,6 +364,32 @@ export default function AdminPanel() {
                 <p className="text-sm text-gray-500">Ocultar/mostrar categorías del filtro</p>
               </div>
             </button>
+
+            <button
+              onClick={() => router.push('/admin/sincronizacion')}
+              className="flex items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <svg className="w-6 h-6 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <div className="text-left">
+                <p className="font-medium text-gray-900">Sincronización Avanzada</p>
+                <p className="text-sm text-gray-500">Configurar cron y lotes</p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => router.push('/admin/backup')}
+              className="flex items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <svg className="w-6 h-6 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+              </svg>
+              <div className="text-left">
+                <p className="font-medium text-gray-900">Backup y Restauración</p>
+                <p className="text-sm text-gray-500">Copias de seguridad del sistema</p>
+              </div>
+            </button>
           </div>
         </div>
       </div>

@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
 import { RefreshCw, Play, Settings, BarChart3, Clock, Package } from 'lucide-react'
+import { AdminHeader } from '@/components/admin/admin-header'
 
 interface SyncConfig {
   sync_schedule: {
@@ -59,7 +60,7 @@ export default function SincronizacionPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [syncing, setSyncing] = useState(false)
-  const { toast } = useToast()
+  const { success, error } = useToast()
 
   useEffect(() => {
     loadConfig()
@@ -74,19 +75,11 @@ export default function SincronizacionPage() {
         setConfig(data.config)
         setStats(data.stats)
       } else {
-        toast({
-          title: "Error",
-          description: data.error || "Error cargando configuración",
-          variant: "destructive"
-        })
+        error("Error", data.error || "Error cargando configuración")
       }
-    } catch (error) {
-      console.error('Error loading config:', error)
-      toast({
-        title: "Error",
-        description: "Error de conexión",
-        variant: "destructive"
-      })
+    } catch (err) {
+      console.error('Error loading config:', err)
+      error("Error", "Error de conexión")
     } finally {
       setLoading(false)
     }
@@ -106,25 +99,14 @@ export default function SincronizacionPage() {
       const data = await response.json()
 
       if (response.ok) {
-        toast({
-          title: "Éxito",
-          description: "Configuración guardada correctamente"
-        })
+        success("Éxito", "Configuración guardada correctamente")
         loadConfig() // Recargar para mostrar cambios
       } else {
-        toast({
-          title: "Error",
-          description: data.error || "Error guardando configuración",
-          variant: "destructive"
-        })
+        error("Error", data.error || "Error guardando configuración")
       }
-    } catch (error) {
-      console.error('Error saving config:', error)
-      toast({
-        title: "Error",
-        description: "Error de conexión",
-        variant: "destructive"
-      })
+    } catch (err) {
+      console.error('Error saving config:', err)
+      error("Error", "Error de conexión")
     } finally {
       setSaving(false)
     }
@@ -144,26 +126,15 @@ export default function SincronizacionPage() {
       const data = await response.json()
 
       if (response.ok) {
-        toast({
-          title: "Éxito",
-          description: `Sincronización ${syncType} iniciada correctamente`
-        })
+        success("Éxito", `Sincronización ${syncType} iniciada correctamente`)
         // Recargar estadísticas después de un momento
         setTimeout(() => loadConfig(), 2000)
       } else {
-        toast({
-          title: "Error",
-          description: data.error || "Error ejecutando sincronización",
-          variant: "destructive"
-        })
+        error("Error", data.error || "Error ejecutando sincronización")
       }
-    } catch (error) {
-      console.error('Error executing sync:', error)
-      toast({
-        title: "Error",
-        description: "Error de conexión",
-        variant: "destructive"
-      })
+    } catch (err) {
+      console.error('Error executing sync:', err)
+      error("Error", "Error de conexión")
     } finally {
       setSyncing(false)
     }
@@ -215,12 +186,15 @@ export default function SincronizacionPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Sincronización de Productos</h1>
-          <p className="text-gray-600">Configuración y control del sistema de sincronización</p>
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      <AdminHeader />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">Sincronización de Productos</h1>
+              <p className="text-gray-600">Configuración y control del sistema de sincronización</p>
+            </div>
         <div className="flex gap-2">
           <Button
             onClick={() => executSync('changes')}
@@ -262,12 +236,12 @@ export default function SincronizacionPage() {
               <div>
                 <p className="text-sm text-gray-600">Última Sincronización</p>
                 <p className="text-sm font-medium">
-                  {config.last_sync_date?.timestamp 
+                  {config?.last_sync_date?.timestamp 
                     ? new Date(config.last_sync_date.timestamp).toLocaleDateString()
                     : 'Nunca'
                   }
                 </p>
-                {config.last_sync_date?.status && getStatusBadge(config.last_sync_date.status)}
+                {config?.last_sync_date?.status && getStatusBadge(config.last_sync_date.status)}
               </div>
             </div>
           </CardContent>
@@ -280,10 +254,10 @@ export default function SincronizacionPage() {
               <div>
                 <p className="text-sm text-gray-600">Estado Automático</p>
                 <p className="text-sm font-medium">
-                  {config.sync_schedule.enabled ? 'Activo' : 'Inactivo'}
+                  {config?.sync_schedule?.enabled ? 'Activo' : 'Inactivo'}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {getIntervalLabel(config.sync_schedule.interval)}
+                  {config?.sync_schedule?.interval ? getIntervalLabel(config.sync_schedule.interval) : 'No configurado'}
                 </p>
               </div>
             </div>
@@ -296,7 +270,7 @@ export default function SincronizacionPage() {
               <BarChart3 className="w-8 h-8 text-orange-600" />
               <div>
                 <p className="text-sm text-gray-600">Lotes Configurados</p>
-                <p className="text-2xl font-bold">{config.sync_batch_settings.batchSize}</p>
+                <p className="text-2xl font-bold">{config?.sync_batch_settings?.batchSize || 0}</p>
                 <p className="text-xs text-gray-500">productos por lote</p>
               </div>
             </div>
@@ -323,7 +297,7 @@ export default function SincronizacionPage() {
               <div className="flex items-center space-x-2">
                 <Switch
                   id="sync-enabled"
-                  checked={config.sync_schedule.enabled}
+                  checked={config?.sync_schedule?.enabled || false}
                   onCheckedChange={(checked) => {
                     const newConfig = { ...config.sync_schedule, enabled: checked }
                     setConfig(prev => ({ ...prev!, sync_schedule: newConfig }))
@@ -337,7 +311,7 @@ export default function SincronizacionPage() {
                 <div>
                   <Label htmlFor="interval">Intervalo</Label>
                   <Select
-                    value={config.sync_schedule.interval}
+                    value={config?.sync_schedule?.interval || 'daily'}
                     onValueChange={(value) => {
                       const newConfig = { ...config.sync_schedule, interval: value }
                       setConfig(prev => ({ ...prev!, sync_schedule: newConfig }))
@@ -357,13 +331,13 @@ export default function SincronizacionPage() {
                   </Select>
                 </div>
 
-                {config.sync_schedule.interval === 'daily' && (
+                {config?.sync_schedule?.interval === 'daily' && (
                   <div>
                     <Label htmlFor="time">Hora de ejecución</Label>
                     <Input
                       id="time"
                       type="time"
-                      value={config.sync_schedule.time}
+                      value={config?.sync_schedule?.time || '00:00'}
                       onChange={(e) => {
                         const newConfig = { ...config.sync_schedule, time: e.target.value }
                         setConfig(prev => ({ ...prev!, sync_schedule: newConfig }))
@@ -373,11 +347,11 @@ export default function SincronizacionPage() {
                   </div>
                 )}
 
-                {config.sync_schedule.interval === 'weekly' && (
+                {config?.sync_schedule?.interval === 'weekly' && (
                   <div>
                     <Label htmlFor="dayOfWeek">Día de la semana</Label>
                     <Select
-                      value={config.sync_schedule.dayOfWeek.toString()}
+                      value={config?.sync_schedule?.dayOfWeek?.toString() || '0'}
                       onValueChange={(value) => {
                         const newConfig = { ...config.sync_schedule, dayOfWeek: parseInt(value) }
                         setConfig(prev => ({ ...prev!, sync_schedule: newConfig }))
@@ -400,13 +374,13 @@ export default function SincronizacionPage() {
                   </div>
                 )}
 
-                {config.sync_schedule.interval === 'custom' && (
+                {config?.sync_schedule?.interval === 'custom' && (
                   <div>
                     <Label htmlFor="customCron">Expresión Cron</Label>
                     <Input
                       id="customCron"
                       placeholder="0 */6 * * * (cada 6 horas)"
-                      value={config.sync_schedule.customCron || ''}
+                      value={config?.sync_schedule?.customCron || ''}
                       onChange={(e) => {
                         const newConfig = { ...config.sync_schedule, customCron: e.target.value }
                         setConfig(prev => ({ ...prev!, sync_schedule: newConfig }))
@@ -436,7 +410,7 @@ export default function SincronizacionPage() {
                   type="number"
                   min="100"
                   max="5000"
-                  value={config.sync_batch_settings.batchSize}
+                  value={config?.sync_batch_settings?.batchSize || 100}
                   onChange={(e) => {
                     const newConfig = { ...config.sync_batch_settings, batchSize: parseInt(e.target.value) }
                     setConfig(prev => ({ ...prev!, sync_batch_settings: newConfig }))
@@ -455,7 +429,7 @@ export default function SincronizacionPage() {
                   type="number"
                   min="500"
                   max="10000"
-                  value={config.sync_batch_settings.pauseBetweenBatches}
+                  value={config?.sync_batch_settings?.pauseBetweenBatches || 1000}
                   onChange={(e) => {
                     const newConfig = { ...config.sync_batch_settings, pauseBetweenBatches: parseInt(e.target.value) }
                     setConfig(prev => ({ ...prev!, sync_batch_settings: newConfig }))
@@ -474,7 +448,7 @@ export default function SincronizacionPage() {
                   type="number"
                   min="1"
                   max="20"
-                  value={config.sync_batch_settings.maxConcurrentRequests}
+                  value={config?.sync_batch_settings?.maxConcurrentRequests || 5}
                   onChange={(e) => {
                     const newConfig = { ...config.sync_batch_settings, maxConcurrentRequests: parseInt(e.target.value) }
                     setConfig(prev => ({ ...prev!, sync_batch_settings: newConfig }))
@@ -489,7 +463,7 @@ export default function SincronizacionPage() {
               <div className="flex items-center space-x-2">
                 <Switch
                   id="enableProgressLogging"
-                  checked={config.sync_batch_settings.enableProgressLogging}
+                  checked={config?.sync_batch_settings?.enableProgressLogging || false}
                   onCheckedChange={(checked) => {
                     const newConfig = { ...config.sync_batch_settings, enableProgressLogging: checked }
                     setConfig(prev => ({ ...prev!, sync_batch_settings: newConfig }))
@@ -544,6 +518,8 @@ export default function SincronizacionPage() {
           </Card>
         </TabsContent>
       </Tabs>
+        </div>
+      </div>
     </div>
   )
 }

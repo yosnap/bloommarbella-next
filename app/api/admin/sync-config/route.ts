@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (configType === 'sync_batch_settings') {
-      const { batchSize, pauseBetweenBatches, maxConcurrentRequests } = value
+      const { batchSize, pauseBetweenBatches, maxConcurrentRequests, enableProgressLogging } = value
       
       if (typeof batchSize !== 'number' || batchSize < 100 || batchSize > 5000) {
         return NextResponse.json({ error: 'batchSize debe ser un número entre 100 y 5000' }, { status: 400 })
@@ -111,6 +111,10 @@ export async function POST(request: NextRequest) {
       
       if (typeof maxConcurrentRequests !== 'number' || maxConcurrentRequests < 1 || maxConcurrentRequests > 20) {
         return NextResponse.json({ error: 'maxConcurrentRequests debe ser un número entre 1 y 20' }, { status: 400 })
+      }
+      
+      if (typeof enableProgressLogging !== 'boolean') {
+        return NextResponse.json({ error: 'enableProgressLogging debe ser boolean' }, { status: 400 })
       }
     }
 
