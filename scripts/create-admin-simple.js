@@ -11,7 +11,7 @@ async function createAdminSimple() {
     console.log('👑 Creando cuenta de administrador para PRODUCCIÓN...')
     
     const email = 'admin@bloommarbella.es'
-    const password = 'AdminBloom2025\!'
+    const password = 'AdminBloom2025!'
     const name = 'Administrador Bloom'
     
     console.log('📝 Verificando si el usuario ya existe...')
@@ -99,4 +99,3 @@ createAdminSimple()
     console.error('💥 Error fatal:', error)
     process.exit(1)
   })
-EOF < /dev/null
