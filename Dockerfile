@@ -54,6 +54,15 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modul
 # Copy additional dependencies for admin scripts
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/bcryptjs ./node_modules/bcryptjs
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/mongodb ./node_modules/mongodb
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/bson ./node_modules/bson
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@mongodb-js ./node_modules/@mongodb-js
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/mongodb-connection-string-url ./node_modules/mongodb-connection-string-url
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/sparse-bitfield ./node_modules/sparse-bitfield
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/whatwg-url ./node_modules/whatwg-url
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/memory-pager ./node_modules/memory-pager
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/tr46 ./node_modules/tr46
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/webidl-conversions ./node_modules/webidl-conversions
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/punycode ./node_modules/punycode
 
 USER nextjs
 
