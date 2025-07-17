@@ -5,6 +5,54 @@ Todos los cambios notables en este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2025-01-17
+
+### 🔧 Correcciones Críticas y Mejoras de Estabilidad
+
+#### ⚡ Optimizaciones de Base de Datos
+- ✅ **Migración a MongoDB nativo**: Reemplazadas operaciones Prisma problemáticas con driver nativo de MongoDB
+- ✅ **Compatibilidad híbrida**: Soporte para MongoDB standalone (desarrollo) y replica set (producción)
+- ✅ **Migración automática**: Corrección automática de campos null en createdAt/updatedAt (Error P2032)
+- ✅ **Eliminación de dependencias de transacciones** para operaciones simples
+
+#### 🔄 Sistema de Sincronización Avanzado
+- ✅ **Cron configurable desde admin**: Intervalos (hourly, daily, weekly, monthly, custom cron)
+- ✅ **Configuración de lotes**: Prevención de sobrecarga del servidor con batch processing
+- ✅ **Parámetro sysmodified**: Sincronización incremental usando fecha de última actualización
+- ✅ **Interfaz de administración completa** para gestión de configuración
+- ✅ **Logs detallados** con progreso y estadísticas en tiempo real
+
+#### 💾 Sistema de Backup y Restauración
+- ✅ **Backup completo de base de datos** con selección de colecciones
+- ✅ **Backup de ajustes del sistema** por separado
+- ✅ **Restauración selectiva** con validación de integridad de archivos
+- ✅ **Prevención de errores de usuario**: Validación de tipo de archivo antes de restaurar
+- ✅ **Logs de backup**: Registro completo de operaciones de backup/restore
+
+#### 🚀 Mejoras de Despliegue
+- ✅ **Dockerfile optimizado**: Configuración específica para Next.js standalone mode en EasyPanel
+- ✅ **Corrección de servidor**: `next start` → `node server.js` para compatibilidad con contenedores
+- ✅ **Configuración MongoDB en producción**: Conexión optimizada para servicios en la nube
+- ✅ **Logo como favicon**: Configuración del logo de Bloom Marbella como favicon del sitio
+
+#### 🐛 Correcciones de Errores
+- ✅ **Fix P2031**: Eliminación de dependencia de replica set para operaciones básicas
+- ✅ **Fix P2032**: Manejo automático de campos null en timestamps
+- ✅ **Fix 400 errors**: Debug logging mejorado en endpoints de sincronización
+- ✅ **Fix sync-config**: Validación mejorada de datos de configuración
+- ✅ **Fix backup validation**: Prevención de mezcla entre archivos de BD y ajustes
+
+#### 🛠️ Mejoras Técnicas
+- ✅ **Scripts de producción**: `create-admin-production.js` para setup inicial
+- ✅ **AdminHeader**: Agregado a páginas de administración faltantes
+- ✅ **Interfaz mejorada**: Corrección de ancho de página y visibilidad de controles
+- ✅ **Validación robusta**: Checks de integridad en todas las operaciones críticas
+
+#### 📋 Endpoints Migrados a MongoDB Nativo
+- ✅ `/api/admin/sync-config` - Configuración de sincronización
+- ✅ `/api/admin/sync-execute` - Ejecución de sincronización
+- ✅ `/api/admin/backup/settings/restore` - Restauración de ajustes
+
 ## [1.1.0] - 2025-01-12
 
 ### ✨ Nueva Funcionalidad: Sistema de WhatsApp
