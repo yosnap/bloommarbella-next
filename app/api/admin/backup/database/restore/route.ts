@@ -23,7 +23,13 @@ export async function POST(request: NextRequest) {
 
     // Leer y parsear el archivo
     const text = await file.text()
-    const backup = JSON.parse(text)
+    let backup
+    try {
+      backup = JSON.parse(text)
+    } catch (parseError) {
+      console.error('Error parseando archivo JSON:', parseError)
+      return NextResponse.json({ error: 'Archivo JSON inválido' }, { status: 400 })
+    }
 
     // Validar estructura del backup
     if (!backup.version || !backup.collections) {

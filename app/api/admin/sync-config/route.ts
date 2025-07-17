@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'enabled debe ser boolean' }, { status: 400 })
       }
       
-      if (!['hourly', 'daily', 'weekly', 'monthly', 'custom'].includes(interval)) {
+      if (interval && !['hourly', 'daily', 'weekly', 'monthly', 'custom'].includes(interval)) {
         return NextResponse.json({ error: 'interval no válido' }, { status: 400 })
       }
       
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'maxConcurrentRequests debe ser un número entre 1 y 20' }, { status: 400 })
       }
       
-      if (typeof enableProgressLogging !== 'boolean') {
+      if (enableProgressLogging !== undefined && typeof enableProgressLogging !== 'boolean') {
         return NextResponse.json({ error: 'enableProgressLogging debe ser boolean' }, { status: 400 })
       }
     }
