@@ -56,4 +56,4 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 # Use the standalone server
-CMD ["node", ".next/standalone/server.js"]
+CMD ["node", "server.js"]
