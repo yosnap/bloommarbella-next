@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { MongoClient } from 'mongodb'
 
 export async function GET() {
   try {
@@ -11,26 +12,38 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    // Primero, migrar registros con createdAt null
-    await prisma.configuration.updateMany({
-      where: {
-        createdAt: null
-      },
-      data: {
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    })
-    
-    // Migrar registros de syncLog con updatedAt null
-    await prisma.syncLog.updateMany({
-      where: {
-        updatedAt: null
-      },
-      data: {
-        updatedAt: new Date()
-      }
-    })
+    // Primero, migrar registros con createdAt null usando MongoDB nativo
+    try {
+      const client = new MongoClient(process.env.DATABASE_URL!)
+      await client.connect()
+      const db = client.db()
+      
+      // Migrar configurations con createdAt null
+      await db.collection('configurations').updateMany(
+        { createdAt: null },
+        { 
+          $set: { 
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+        }
+      )
+      
+      // Migrar syncLog con updatedAt null
+      await db.collection('sync_logs').updateMany(
+        { updatedAt: null },
+        { 
+          $set: { 
+            updatedAt: new Date()
+          }
+        }
+      )
+      
+      await client.close()
+    } catch (migrationError) {
+      console.warn('Advertencia: Error en migración automática:', migrationError)
+      // Continuar sin fallar - la migración es opcional
+    }
     
     // Obtener todas las configuraciones de sincronización
     const configs = await prisma.configuration.findMany({
@@ -139,20 +152,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Actualizar configuración
-    await prisma.configuration.upsert({
-      where: { key: configType },
-      update: {
-        value,
-        updatedAt: new Date()
+    // Actualizar configuración usando MongoDB nativo
+    const client = new MongoClient(process.env.DATABASE_URL!)
+    await client.connect()
+    const db = client.db()
+    
+    await db.collection('configurations').updateOne(
+      { key: configType },
+      {
+        $set: {
+          value,
+          updatedAt: new Date()
+        },
+        $setOnInsert: {
+          key: configType,
+          description: `Configuración de ${configType}`,
+          createdAt: new Date()
+        }
       },
-      create: {
-        key: configType,
-        value,
-        description: `Configuración de ${configType}`,
-        createdAt: new Date()
-      }
-    })
+      { upsert: true }
+    )
+    
+    await client.close()
 
     // Registrar cambio en logs
     await prisma.syncLog.create({

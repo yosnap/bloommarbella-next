@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { MongoClient } from 'mongodb'
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,20 +38,28 @@ export async function POST(request: NextRequest) {
       }, { status: 409 })
     }
 
-    // Crear log de inicio
-    const syncLog = await prisma.syncLog.create({
-      data: {
-        type: `sync-${syncType}`,
-        status: 'in_progress',
-        productsProcessed: 0,
-        errors: 0,
-        metadata: {
-          startedBy: session.user.email,
-          startedAt: new Date().toISOString(),
-          syncType
-        }
-      }
+    // Crear log de inicio usando MongoDB nativo
+    const client = new MongoClient(process.env.DATABASE_URL!)
+    await client.connect()
+    const db = client.db()
+    
+    const syncLogResult = await db.collection('sync_logs').insertOne({
+      type: `sync-${syncType}`,
+      status: 'in_progress',
+      productsProcessed: 0,
+      errors: 0,
+      metadata: {
+        startedBy: session.user.email,
+        startedAt: new Date().toISOString(),
+        syncType
+      },
+      createdAt: new Date(),
+      updatedAt: new Date()
     })
+    
+    await client.close()
+    
+    const syncLog = { id: syncLogResult.insertedId.toString(), createdAt: new Date() }
 
     // Obtener configuraciones
     const [scheduleConfig, batchConfig, lastSyncConfig] = await Promise.all([
@@ -110,62 +119,86 @@ async function processSyncInBackground(
     // Ejecutar sincronización con configuración de lotes
     const result = await hybridSync.syncChanges(lastSyncDate, batchConfig)
     
-    // Actualizar log con resultado exitoso
-    await prisma.syncLog.update({
-      where: { id: syncLogId },
-      data: {
-        status: result.errors > 0 ? 'partial' : 'success',
-        productsProcessed: result.newProducts + result.updatedProducts,
-        errors: result.errors,
-        metadata: {
-          ...result,
-          completedAt: new Date().toISOString(),
-          syncType,
-          lastSyncDate: lastSyncDate.toISOString()
+    // Actualizar log con resultado exitoso usando MongoDB nativo
+    const client = new MongoClient(process.env.DATABASE_URL!)
+    await client.connect()
+    const db = client.db()
+    const { ObjectId } = require('mongodb')
+    
+    await db.collection('sync_logs').updateOne(
+      { _id: new ObjectId(syncLogId) },
+      {
+        $set: {
+          status: result.errors > 0 ? 'partial' : 'success',
+          productsProcessed: result.newProducts + result.updatedProducts,
+          errors: result.errors,
+          metadata: {
+            ...result,
+            completedAt: new Date().toISOString(),
+            syncType,
+            lastSyncDate: lastSyncDate.toISOString()
+          },
+          updatedAt: new Date()
         }
       }
-    })
+    )
 
     // Actualizar última sincronización exitosa solo si no hubo errores
     if (result.errors === 0) {
-      await prisma.configuration.upsert({
-        where: { key: 'last_sync_date' },
-        update: {
-          value: {
-            timestamp: new Date().toISOString(),
-            status: 'success'
+      await db.collection('configurations').updateOne(
+        { key: 'last_sync_date' },
+        {
+          $set: {
+            value: {
+              timestamp: new Date().toISOString(),
+              status: 'success'
+            },
+            updatedAt: new Date()
           },
-          updatedAt: new Date()
+          $setOnInsert: {
+            key: 'last_sync_date',
+            description: 'Última sincronización exitosa de productos',
+            createdAt: new Date()
+          }
         },
-        create: {
-          key: 'last_sync_date',
-          value: {
-            timestamp: new Date().toISOString(),
-            status: 'success'
-          },
-          description: 'Última sincronización exitosa de productos'
-        }
-      })
+        { upsert: true }
+      )
     }
+    
+    await client.close()
 
     console.log(`✅ Sincronización ${syncType} completada: ${result.newProducts} nuevos, ${result.updatedProducts} actualizados, ${result.errors} errores`)
 
   } catch (error) {
     console.error(`❌ Error en sincronización ${syncType}:`, error)
     
-    // Actualizar log con error
-    await prisma.syncLog.update({
-      where: { id: syncLogId },
-      data: {
-        status: 'error',
-        errors: 1,
-        metadata: {
-          error: error instanceof Error ? error.message : 'Unknown error',
-          completedAt: new Date().toISOString(),
-          syncType,
-          lastSyncDate: lastSyncDate.toISOString()
+    // Actualizar log con error usando MongoDB nativo
+    try {
+      const client = new MongoClient(process.env.DATABASE_URL!)
+      await client.connect()
+      const db = client.db()
+      const { ObjectId } = require('mongodb')
+      
+      await db.collection('sync_logs').updateOne(
+        { _id: new ObjectId(syncLogId) },
+        {
+          $set: {
+            status: 'error',
+            errors: 1,
+            metadata: {
+              error: error instanceof Error ? error.message : 'Unknown error',
+              completedAt: new Date().toISOString(),
+              syncType,
+              lastSyncDate: lastSyncDate.toISOString()
+            },
+            updatedAt: new Date()
+          }
         }
-      }
-    }).catch(console.error)
+      )
+      
+      await client.close()
+    } catch (logError) {
+      console.error('Error updating sync log:', logError)
+    }
   }
 }

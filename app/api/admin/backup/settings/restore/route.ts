@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { MongoClient } from 'mongodb'
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,6 +43,12 @@ export async function POST(request: NextRequest) {
     const errors: string[] = []
     const restoredSettings: string[] = []
 
+    // Usar MongoDB nativo para evitar problemas de transacciones
+    const client = new MongoClient(process.env.DATABASE_URL!)
+    await client.connect()
+    const db = client.db()
+    const configurationsCollection = db.collection('configurations')
+
     // Restaurar cada configuración
     for (const [key, setting] of Object.entries(backup.settings)) {
       try {
@@ -51,19 +58,21 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        await prisma.configuration.upsert({
-          where: { key },
-          update: {
-            value: (setting as any).value,
-            description: (setting as any).description,
-            updatedAt: new Date()
+        // Usar upsert nativo de MongoDB
+        await configurationsCollection.updateOne(
+          { key },
+          {
+            $set: {
+              value: (setting as any).value,
+              description: (setting as any).description || `Ajuste restaurado desde backup`,
+              updatedAt: new Date()
+            },
+            $setOnInsert: {
+              createdAt: new Date()
+            }
           },
-          create: {
-            key,
-            value: (setting as any).value,
-            description: (setting as any).description || `Ajuste restaurado desde backup`
-          }
-        })
+          { upsert: true }
+        )
         
         restoredCount++
         restoredSettings.push(key)
@@ -74,6 +83,8 @@ export async function POST(request: NextRequest) {
         console.error(errorMsg)
       }
     }
+
+    await client.close()
 
     // Si hay ajustes de sincronización restaurados, reiniciar el scheduler
     if (restoredSettings.some(key => key.startsWith('sync_'))) {
