@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "npx prisma generate && next build",
     "start": "next start",
-    "postbuild": "node scripts/init-production.js",
+    "postbuild:skip": "node scripts/init-production.js",
     "lint": "next lint",
     "test": "echo \"Error: no test specified\" && exit 1",
     "sync-demo": "node scripts/sync-demo-data.js",
