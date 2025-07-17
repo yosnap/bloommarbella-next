@@ -103,51 +103,65 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    const { configType, value } = await request.json()
+    const requestBody = await request.json()
+    console.log('📨 Sync config request:', requestBody)
+    
+    const { configType, value } = requestBody
 
     if (!configType || !value) {
+      console.log('❌ Faltan datos requeridos:', { configType, value })
       return NextResponse.json({ error: 'Tipo de configuración y valor son requeridos' }, { status: 400 })
     }
 
     // Validar tipos de configuración permitidos
     const allowedTypes = ['sync_schedule', 'sync_batch_settings', 'sync_settings']
     if (!allowedTypes.includes(configType)) {
+      console.log('❌ Tipo de configuración no válido:', configType)
       return NextResponse.json({ error: 'Tipo de configuración no válido' }, { status: 400 })
     }
 
     // Validar valores según el tipo
     if (configType === 'sync_schedule') {
       const { enabled, interval, time, dayOfWeek, dayOfMonth, customCron } = value
+      console.log('🔍 Validando sync_schedule:', { enabled, interval, time, dayOfWeek, dayOfMonth, customCron })
       
       if (typeof enabled !== 'boolean') {
+        console.log('❌ enabled no es boolean:', enabled)
         return NextResponse.json({ error: 'enabled debe ser boolean' }, { status: 400 })
       }
       
       if (interval && !['hourly', 'daily', 'weekly', 'monthly', 'custom'].includes(interval)) {
+        console.log('❌ interval no válido:', interval)
         return NextResponse.json({ error: 'interval no válido' }, { status: 400 })
       }
       
       if (interval === 'custom' && !customCron) {
+        console.log('❌ customCron requerido para interval custom')
         return NextResponse.json({ error: 'customCron es requerido para interval custom' }, { status: 400 })
       }
     }
 
     if (configType === 'sync_batch_settings') {
       const { batchSize, pauseBetweenBatches, maxConcurrentRequests, enableProgressLogging } = value
+      console.log('🔍 Validando sync_batch_settings:', { batchSize, pauseBetweenBatches, maxConcurrentRequests, enableProgressLogging })
       
       if (typeof batchSize !== 'number' || batchSize < 100 || batchSize > 5000) {
+        console.log('❌ batchSize inválido:', batchSize)
         return NextResponse.json({ error: 'batchSize debe ser un número entre 100 y 5000' }, { status: 400 })
       }
       
       if (typeof pauseBetweenBatches !== 'number' || pauseBetweenBatches < 500 || pauseBetweenBatches > 10000) {
+        console.log('❌ pauseBetweenBatches inválido:', pauseBetweenBatches)
         return NextResponse.json({ error: 'pauseBetweenBatches debe ser un número entre 500 y 10000' }, { status: 400 })
       }
       
       if (typeof maxConcurrentRequests !== 'number' || maxConcurrentRequests < 1 || maxConcurrentRequests > 20) {
+        console.log('❌ maxConcurrentRequests inválido:', maxConcurrentRequests)
         return NextResponse.json({ error: 'maxConcurrentRequests debe ser un número entre 1 y 20' }, { status: 400 })
       }
       
       if (enableProgressLogging !== undefined && typeof enableProgressLogging !== 'boolean') {
+        console.log('❌ enableProgressLogging inválido:', enableProgressLogging)
         return NextResponse.json({ error: 'enableProgressLogging debe ser boolean' }, { status: 400 })
       }
     }
