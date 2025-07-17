@@ -452,7 +452,7 @@ export class HybridSync {
   /**
    * Sincronizar cambios desde Nieuwkoop
    */
-  async syncChanges(lastSyncDate?: Date): Promise<{
+  async syncChanges(lastSyncDate?: Date, batchConfig?: any): Promise<{
     newProducts: number
     updatedProducts: number
     errors: number
@@ -474,10 +474,14 @@ export class HybridSync {
       let updatedProducts = 0
       let errors = 0
 
-      console.log(`📊 Procesando ${response.data.length} productos en lotes de 500...`)
+      // Usar configuración de lotes personalizada o valores por defecto
+      const batchSize = batchConfig?.batchSize || 500
+      const pauseBetweenBatches = batchConfig?.pauseBetweenBatches || 2000
+      const enableProgressLogging = batchConfig?.enableProgressLogging !== false
+      
+      console.log(`📊 Procesando ${response.data.length} productos en lotes de ${batchSize}...`)
       
       // Procesar productos en lotes para evitar sobrecargar la base de datos
-      const batchSize = 500
       const totalBatches = Math.ceil(response.data.length / batchSize)
       
       for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
@@ -485,7 +489,9 @@ export class HybridSync {
         const end = Math.min(start + batchSize, response.data.length)
         const batch = response.data.slice(start, end)
         
-        console.log(`📊 Procesando lote ${batchIndex + 1}/${totalBatches} (${batch.length} productos)...`)
+        if (enableProgressLogging) {
+          console.log(`📊 Procesando lote ${batchIndex + 1}/${totalBatches} (${batch.length} productos)...`)
+        }
         
         // Procesar cada producto del lote
         for (const nieuwkoopProduct of batch) {
@@ -619,8 +625,10 @@ export class HybridSync {
         
         // Pausa entre lotes para evitar saturar el servidor
         if (batchIndex < totalBatches - 1) {
-          console.log(`⏳ Pausa de 1 segundo entre lotes...`)
-          await new Promise(resolve => setTimeout(resolve, 1000))
+          if (enableProgressLogging) {
+            console.log(`⏳ Pausa de ${pauseBetweenBatches}ms entre lotes...`)
+          }
+          await new Promise(resolve => setTimeout(resolve, pauseBetweenBatches))
         }
       }
 

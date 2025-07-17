@@ -18,6 +18,9 @@
     "sync-manual": "node scripts/cron-sync-fixed.js sync",
     "sync-full": "node scripts/cron-sync-fixed.js full",
     "sync-status": "node scripts/cron-sync-fixed.js status",
+    "scheduler-start": "node scripts/smart-scheduler.js start",
+    "scheduler-status": "node scripts/smart-scheduler.js status",
+    "init-sync-config": "node scripts/init-sync-config.js",
     "db:generate": "npx prisma generate",
     "db:push": "npx prisma db push"
   },
@@ -40,6 +43,7 @@
     "mongodb": "^6.3.0",
     "next": "^15.3.5",
     "next-auth": "^4.24.11",
+    "node-cron": "^3.0.3",
     "node-fetch": "^3.3.2",
     "postcss": "^8.5.6",
     "prisma": "^6.11.1",

@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client')
+const { hybridSync } = require('../lib/nieuwkoop/hybrid-sync')
 
 const prisma = new PrismaClient()
 
@@ -65,26 +66,13 @@ class CronSync {
         ? new Date(lastSync.value.timestamp)
         : new Date(Date.now() - 24 * 60 * 60 * 1000)
 
-      // Simular sincronización exitosa (reemplazar con hybrid sync real)
-      const result = {
-        newProducts: 0,
-        updatedProducts: 0,
-        errors: 0
-      }
-
-      // Actualizar timestamp de sincronización
-      await prisma.configuration.upsert({
-        where: { key: 'last_sync_date' },
-        update: { 
-          value: { timestamp: new Date().toISOString() },
-          updatedAt: new Date()
-        },
-        create: {
-          key: 'last_sync_date',
-          value: { timestamp: new Date().toISOString() },
-          description: 'Última sincronización de productos'
-        }
+      // Obtener configuración de lotes
+      const batchConfig = await prisma.configuration.findUnique({
+        where: { key: 'sync_batch_settings' }
       })
+
+      // Usar HybridSync real para sincronizar cambios
+      const result = await hybridSync.syncChanges(lastSyncDate, batchConfig?.value)
 
       // Registrar resultado
       await prisma.syncLog.create({
