@@ -325,7 +325,7 @@ export default function BackupPage() {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Database className="w-4 h-4" />
-                      <span>Incluye: Productos, Usuarios, Configuraciones, Traducciones</span>
+                      <span>Incluye: Productos, Usuarios, Configuraciones, Traducciones, Categorías, Favoritos, Solicitudes, Servicios, Blog</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Shield className="w-4 h-4" />
@@ -438,6 +438,10 @@ export default function BackupPage() {
                       <Badge variant="secondary">Configuraciones</Badge>
                       <Badge variant="secondary">Traducciones</Badge>
                       <Badge variant="secondary">Categorías</Badge>
+                      <Badge variant="secondary">Favoritos</Badge>
+                      <Badge variant="secondary">Solicitudes de Asociados</Badge>
+                      <Badge variant="secondary">Servicios</Badge>
+                      <Badge variant="secondary">Blog Posts</Badge>
                       <Badge variant="secondary">Logs de Sincronización</Badge>
                     </div>
                   </div>

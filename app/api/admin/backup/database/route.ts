@@ -21,7 +21,10 @@ export async function POST() {
       translations,
       categoryVisibility,
       syncLogs,
-      favorites
+      favorites,
+      associateRequests,
+      services,
+      blogPosts
     ] = await Promise.all([
       prisma.product.findMany(),
       prisma.user.findMany({
@@ -56,7 +59,10 @@ export async function POST() {
         orderBy: { createdAt: 'desc' },
         take: 1000 // Limitar logs para no hacer el backup muy grande
       }),
-      prisma.favorite.findMany()
+      prisma.favorite.findMany(),
+      prisma.associateRequest.findMany(),
+      prisma.service.findMany(),
+      prisma.blogPost.findMany()
     ])
 
     // Crear objeto de backup
@@ -91,13 +97,26 @@ export async function POST() {
         favorites: {
           count: favorites.length,
           data: favorites
+        },
+        associateRequests: {
+          count: associateRequests.length,
+          data: associateRequests
+        },
+        services: {
+          count: services.length,
+          data: services
+        },
+        blogPosts: {
+          count: blogPosts.length,
+          data: blogPosts
         }
       },
       metadata: {
         createdBy: session.user.email,
         totalRecords: products.length + users.length + configurations.length + 
                      translations.length + categoryVisibility.length + 
-                     syncLogs.length + favorites.length
+                     syncLogs.length + favorites.length + associateRequests.length + 
+                     services.length + blogPosts.length
       }
     }
 

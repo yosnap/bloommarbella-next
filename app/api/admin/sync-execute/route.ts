@@ -66,8 +66,9 @@ export async function POST(request: NextRequest) {
       lastSyncDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
     } else {
       // Para sincronización de cambios, usar la última fecha exitosa
-      lastSyncDate = lastSyncConfig?.value?.timestamp 
-        ? new Date(lastSyncConfig.value.timestamp)
+      const lastSyncValue = lastSyncConfig?.value as { timestamp?: string } | undefined
+      lastSyncDate = lastSyncValue?.timestamp 
+        ? new Date(lastSyncValue.timestamp)
         : new Date(Date.now() - 24 * 60 * 60 * 1000)
     }
 
@@ -159,7 +160,7 @@ async function processSyncInBackground(
         status: 'error',
         errors: 1,
         metadata: {
-          error: error.message,
+          error: error instanceof Error ? error.message : 'Unknown error',
           completedAt: new Date().toISOString(),
           syncType,
           lastSyncDate: lastSyncDate.toISOString()

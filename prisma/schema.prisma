@@ -14,10 +14,26 @@ datasource db {
 model User {
   id            String    @id @default(auto()) @map("_id") @db.ObjectId
   email         String    @unique
+  emailVerified DateTime?
   password      String
   name          String?
+  image         String?
   role          UserRole  @default(CUSTOMER)
   isActive      Boolean   @default(true)
+  
+  // Associate fields
+  companyName              String?
+  taxId                    String?
+  phone                    String?
+  address                  String?
+  city                     String?
+  postalCode               String?
+  associateStatus          String?
+  associateRequestDate     DateTime?
+  associateApprovalDate    DateTime?
+  isEmailNotificationsEnabled Boolean @default(true)
+  lastLogin                DateTime?
+  
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   
@@ -233,6 +249,7 @@ model Configuration {
   key             String   @unique
   value           Json
   description     String?
+  createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
   @@map("configurations")
@@ -247,6 +264,20 @@ model SyncLog {
   errors            Int      @default(0)
   metadata          Json?    // Additional sync information
   createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
   
   @@map("sync_logs")
+}
+
+// Category visibility management
+model CategoryVisibility {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  englishName String   @unique
+  spanishName String?
+  isVisible   Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("category_visibility")
 }
