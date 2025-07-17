@@ -35,6 +35,9 @@ COPY --from=builder /app/public ./public
 # Copy scripts directory for admin creation and utilities
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 
+# Copy prisma schema for database operations
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+
 # Set the correct permission for prerender cache
 RUN mkdir .next
 RUN chown nextjs:nodejs .next
