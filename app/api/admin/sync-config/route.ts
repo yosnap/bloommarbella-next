@@ -11,6 +11,27 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
+    // Primero, migrar registros con createdAt null
+    await prisma.configuration.updateMany({
+      where: {
+        createdAt: null
+      },
+      data: {
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    })
+    
+    // Migrar registros de syncLog con updatedAt null
+    await prisma.syncLog.updateMany({
+      where: {
+        updatedAt: null
+      },
+      data: {
+        updatedAt: new Date()
+      }
+    })
+    
     // Obtener todas las configuraciones de sincronización
     const configs = await prisma.configuration.findMany({
       where: {
@@ -128,7 +149,8 @@ export async function POST(request: NextRequest) {
       create: {
         key: configType,
         value,
-        description: `Configuración de ${configType}`
+        description: `Configuración de ${configType}`,
+        createdAt: new Date()
       }
     })
 
