@@ -59,7 +59,12 @@ export async function POST(request: NextRequest) {
     
     await client.close()
     
-    const syncLog = { id: syncLogResult.insertedId.toString(), createdAt: new Date() }
+    const syncLog = { 
+      id: syncLogResult.insertedId.toString(), 
+      type: `sync-${syncType}`,
+      status: 'in_progress',
+      createdAt: new Date() 
+    }
 
     // Obtener configuraciones
     const [scheduleConfig, batchConfig, lastSyncConfig] = await Promise.all([
