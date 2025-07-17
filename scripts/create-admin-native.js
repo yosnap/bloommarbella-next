@@ -14,7 +14,7 @@ async function createAdminNative() {
     console.log('✅ Conexión a MongoDB exitosa');
     
     const db = client.db('bloommarbella');
-    const usersCollection = db.collection('User');
+    const usersCollection = db.collection('users');
     
     console.log('👑 Creando cuenta de administrador para PRODUCCIÓN...');
     
