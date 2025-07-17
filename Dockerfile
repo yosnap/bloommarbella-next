@@ -32,6 +32,9 @@ RUN adduser --system --uid 1001 nextjs
 # Copy built application
 COPY --from=builder /app/public ./public
 
+# Copy scripts directory for admin creation and utilities
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+
 # Set the correct permission for prerender cache
 RUN mkdir .next
 RUN chown nextjs:nodejs .next
