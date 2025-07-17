@@ -19,6 +19,29 @@ export async function GET(request: NextRequest) {
     const activeProducts = await prisma.product.count({
       where: { active: true }
     })
+    
+    // Estadísticas de todas las colecciones para backup
+    const [
+      totalUsers,
+      totalConfigurations,
+      totalTranslations,
+      totalCategoryVisibility,
+      totalFavorites,
+      totalAssociateRequests,
+      totalServices,
+      totalBlogPosts,
+      totalSyncLogs
+    ] = await Promise.all([
+      prisma.user.count(),
+      prisma.configuration.count(),
+      prisma.translation.count(),
+      prisma.categoryVisibility.count(),
+      prisma.favorite.count(),
+      prisma.associateRequest.count(),
+      prisma.service.count(),
+      prisma.blogPost.count(),
+      prisma.syncLog.count()
+    ])
 
     // Obtener categorías más comunes
     const categories = await prisma.product.groupBy({
@@ -115,6 +138,17 @@ export async function GET(request: NextRequest) {
         activeProducts,
         inactiveProducts: totalProducts - activeProducts
       },
+      // Estadísticas para cálculo de backup
+      products: totalProducts,
+      users: totalUsers,
+      configurations: totalConfigurations,
+      translations: totalTranslations,
+      categoryVisibility: totalCategoryVisibility,
+      favorites: totalFavorites,
+      associateRequests: totalAssociateRequests,
+      services: totalServices,
+      blogPosts: totalBlogPosts,
+      syncLogs: totalSyncLogs,
       categories: categories.map(cat => ({
         category: cat.category,
         count: cat._count.category

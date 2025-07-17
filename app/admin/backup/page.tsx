@@ -37,9 +37,21 @@ export default function BackupPage() {
     settingsBackup: false,
     settingsRestore: false
   })
+  
+  const [selectedFiles, setSelectedFiles] = useState({
+    dbFile: null as File | null,
+    settingsFile: null as File | null
+  })
+  
+  const [fileValidation, setFileValidation] = useState({
+    dbFileValid: true,
+    settingsFileValid: true,
+    dbFileError: '',
+    settingsFileError: ''
+  })
   const [backupInfo, setBackupInfo] = useState<BackupInfo>({
     lastBackup: null,
-    size: '0 MB',
+    size: 'Calculando...',
     version: '1.0'
   })
   
@@ -75,8 +87,95 @@ export default function BackupPage() {
   
   const [settingsConfig, setSettingsConfig] = useState<SettingsConfig>({})
 
+  // Validar archivo de base de datos
+  const validateDatabaseFile = async (file: File): Promise<{ valid: boolean; error: string }> => {
+    try {
+      const text = await file.text()
+      const backup = JSON.parse(text)
+      
+      // Validar que sea un backup de base de datos
+      if (backup.type === 'settings') {
+        return { valid: false, error: 'Este es un archivo de ajustes. Selecciona un archivo de backup de base de datos.' }
+      }
+      
+      if (!backup.collections || !backup.version) {
+        return { valid: false, error: 'Formato de archivo inválido. Debe ser un backup de base de datos.' }
+      }
+      
+      // Verificar que tenga las colecciones esperadas
+      const expectedCollections = ['products', 'users', 'configurations', 'translations']
+      const hasExpectedCollections = expectedCollections.some(col => backup.collections[col])
+      
+      if (!hasExpectedCollections) {
+        return { valid: false, error: 'El archivo no contiene las colecciones esperadas de base de datos.' }
+      }
+      
+      return { valid: true, error: '' }
+    } catch (error) {
+      return { valid: false, error: 'Error al leer el archivo. Asegúrate de que sea un archivo JSON válido.' }
+    }
+  }
+
+  // Validar archivo de ajustes
+  const validateSettingsFile = async (file: File): Promise<{ valid: boolean; error: string }> => {
+    try {
+      const text = await file.text()
+      const backup = JSON.parse(text)
+      
+      // Validar que sea un backup de ajustes
+      if (backup.collections) {
+        return { valid: false, error: 'Este es un archivo de base de datos. Selecciona un archivo de backup de ajustes.' }
+      }
+      
+      if (backup.type !== 'settings' || !backup.settings || !backup.version) {
+        return { valid: false, error: 'Formato de archivo inválido. Debe ser un backup de ajustes.' }
+      }
+      
+      return { valid: true, error: '' }
+    } catch (error) {
+      return { valid: false, error: 'Error al leer el archivo. Asegúrate de que sea un archivo JSON válido.' }
+    }
+  }
+
+  // Cargar estadísticas de la base de datos
+  const loadDatabaseStats = async () => {
+    try {
+      const response = await fetch('/api/admin/db-stats')
+      if (response.ok) {
+        const stats = await response.json()
+        
+        // Calcular tamaño estimado basado en los registros
+        const totalRecords = stats.products + stats.users + stats.configurations + 
+                           stats.translations + (stats.categoryVisibility || 0) + 
+                           (stats.favorites || 0) + (stats.associateRequests || 0) + 
+                           (stats.services || 0) + (stats.blogPosts || 0) + (stats.syncLogs || 0)
+        
+        // Estimación aproximada: 1KB por registro promedio
+        const estimatedSizeKB = totalRecords * 1.5 // 1.5KB por registro
+        const estimatedSizeMB = estimatedSizeKB / 1024
+        
+        let sizeString = '0 MB'
+        if (estimatedSizeMB > 1) {
+          sizeString = `${estimatedSizeMB.toFixed(1)} MB`
+        } else {
+          sizeString = `${estimatedSizeKB.toFixed(0)} KB`
+        }
+        
+        setBackupInfo(prev => ({
+          ...prev,
+          size: sizeString
+        }))
+      }
+    } catch (error) {
+      console.error('Error loading database stats:', error)
+      setBackupInfo(prev => ({ ...prev, size: 'Error al calcular' }))
+    }
+  }
+
   // Cargar configuración inicial y preferencias guardadas
   useEffect(() => {
+    loadDatabaseStats()
+    
     const loadPreferences = async () => {
       try {
         const response = await fetch('/api/admin/backup/settings/preferences')
@@ -200,15 +299,34 @@ export default function BackupPage() {
     }
   }
 
-  // Restaurar base de datos
-  const handleDatabaseRestore = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Seleccionar archivo de base de datos
+  const handleDatabaseFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (!file) return
+    if (file) {
+      const validation = await validateDatabaseFile(file)
+      setFileValidation(prev => ({ 
+        ...prev, 
+        dbFileValid: validation.valid,
+        dbFileError: validation.error 
+      }))
+      
+      if (validation.valid) {
+        setSelectedFiles(prev => ({ ...prev, dbFile: file }))
+      } else {
+        setSelectedFiles(prev => ({ ...prev, dbFile: null }))
+        showError('Archivo inválido', validation.error)
+      }
+    }
+  }
+
+  // Restaurar base de datos
+  const handleDatabaseRestore = async () => {
+    if (!selectedFiles.dbFile) return
 
     setLoading(prev => ({ ...prev, dbRestore: true }))
     try {
       const formData = new FormData()
-      formData.append('backup', file)
+      formData.append('backup', selectedFiles.dbFile)
 
       const response = await fetch('/api/admin/backup/database/restore', {
         method: 'POST',
@@ -219,6 +337,7 @@ export default function BackupPage() {
 
       const result = await response.json()
       success('Backup restaurado', `Se han restaurado ${result.restored} registros correctamente`)
+      setSelectedFiles(prev => ({ ...prev, dbFile: null }))
     } catch (err) {
       console.error('Error restoring backup:', err)
       showError('Error', 'No se pudo restaurar el backup')
@@ -265,15 +384,34 @@ export default function BackupPage() {
     }
   }
 
-  // Restaurar ajustes
-  const handleSettingsRestore = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Seleccionar archivo de ajustes
+  const handleSettingsFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (!file) return
+    if (file) {
+      const validation = await validateSettingsFile(file)
+      setFileValidation(prev => ({ 
+        ...prev, 
+        settingsFileValid: validation.valid,
+        settingsFileError: validation.error 
+      }))
+      
+      if (validation.valid) {
+        setSelectedFiles(prev => ({ ...prev, settingsFile: file }))
+      } else {
+        setSelectedFiles(prev => ({ ...prev, settingsFile: null }))
+        showError('Archivo inválido', validation.error)
+      }
+    }
+  }
+
+  // Restaurar ajustes
+  const handleSettingsRestore = async () => {
+    if (!selectedFiles.settingsFile) return
 
     setLoading(prev => ({ ...prev, settingsRestore: true }))
     try {
       const formData = new FormData()
-      formData.append('settings', file)
+      formData.append('settings', selectedFiles.settingsFile)
 
       const response = await fetch('/api/admin/backup/settings/restore', {
         method: 'POST',
@@ -284,6 +422,7 @@ export default function BackupPage() {
 
       const result = await response.json()
       success('Ajustes restaurados', `Se han restaurado ${result.restored} configuraciones correctamente`)
+      setSelectedFiles(prev => ({ ...prev, settingsFile: null }))
     } catch (err) {
       console.error('Error restoring settings:', err)
       showError('Error', 'No se pudo restaurar los ajustes')
@@ -384,37 +523,73 @@ export default function BackupPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <label htmlFor="db-restore" className="block">
-                      <Button 
-                        variant="outline" 
-                        className="w-full"
-                        disabled={loading.dbRestore}
-                        asChild
-                      >
-                        <span>
-                          {loading.dbRestore ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Restaurando...
-                            </>
-                          ) : (
-                            <>
-                              <Upload className="w-4 h-4 mr-2" />
-                              Seleccionar Archivo de Backup
-                            </>
-                          )}
-                        </span>
-                      </Button>
-                    </label>
-                    <input
-                      id="db-restore"
-                      type="file"
-                      accept=".json"
-                      onChange={handleDatabaseRestore}
-                      className="hidden"
-                      disabled={loading.dbRestore}
-                    />
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <label htmlFor="db-restore" className="block">
+                        <Button 
+                          variant="outline" 
+                          className="w-full"
+                          asChild
+                        >
+                          <span>
+                            <Upload className="w-4 h-4 mr-2" />
+                            Seleccionar Archivo de Backup
+                          </span>
+                        </Button>
+                      </label>
+                      <input
+                        id="db-restore"
+                        type="file"
+                        accept=".json"
+                        onChange={handleDatabaseFileSelect}
+                        className="hidden"
+                      />
+                    </div>
+                    
+                    {selectedFiles.dbFile && fileValidation.dbFileValid && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                        <p className="text-sm font-medium text-green-800">
+                          ✅ Archivo válido: {selectedFiles.dbFile.name}
+                        </p>
+                        <p className="text-xs text-green-600 mt-1">
+                          Tamaño: {(selectedFiles.dbFile.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                        <p className="text-xs text-green-600">
+                          Backup de base de datos detectado correctamente
+                        </p>
+                      </div>
+                    )}
+                    
+                    {!fileValidation.dbFileValid && fileValidation.dbFileError && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <p className="text-sm font-medium text-red-800">
+                          ❌ Archivo inválido
+                        </p>
+                        <p className="text-xs text-red-600 mt-1">
+                          {fileValidation.dbFileError}
+                        </p>
+                      </div>
+                    )}
+                    
+                    <Button 
+                      onClick={handleDatabaseRestore}
+                      disabled={!selectedFiles.dbFile || !fileValidation.dbFileValid || loading.dbRestore}
+                      className="w-full"
+                      variant="destructive"
+                    >
+                      {loading.dbRestore ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Restaurando...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4 mr-2" />
+                          Restaurar Base de Datos
+                        </>
+                      )}
+                    </Button>
+                    
                     <p className="text-xs text-gray-500 text-center">
                       Formatos aceptados: .json
                     </p>
@@ -537,37 +712,73 @@ export default function BackupPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <label htmlFor="settings-restore" className="block">
-                      <Button 
-                        variant="outline" 
-                        className="w-full"
-                        disabled={loading.settingsRestore}
-                        asChild
-                      >
-                        <span>
-                          {loading.settingsRestore ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Importando...
-                            </>
-                          ) : (
-                            <>
-                              <Upload className="w-4 h-4 mr-2" />
-                              Seleccionar Archivo de Ajustes
-                            </>
-                          )}
-                        </span>
-                      </Button>
-                    </label>
-                    <input
-                      id="settings-restore"
-                      type="file"
-                      accept=".json"
-                      onChange={handleSettingsRestore}
-                      className="hidden"
-                      disabled={loading.settingsRestore}
-                    />
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <label htmlFor="settings-restore" className="block">
+                        <Button 
+                          variant="outline" 
+                          className="w-full"
+                          asChild
+                        >
+                          <span>
+                            <Upload className="w-4 h-4 mr-2" />
+                            Seleccionar Archivo de Ajustes
+                          </span>
+                        </Button>
+                      </label>
+                      <input
+                        id="settings-restore"
+                        type="file"
+                        accept=".json"
+                        onChange={handleSettingsFileSelect}
+                        className="hidden"
+                      />
+                    </div>
+                    
+                    {selectedFiles.settingsFile && fileValidation.settingsFileValid && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                        <p className="text-sm font-medium text-green-800">
+                          ✅ Archivo válido: {selectedFiles.settingsFile.name}
+                        </p>
+                        <p className="text-xs text-green-600 mt-1">
+                          Tamaño: {(selectedFiles.settingsFile.size / 1024).toFixed(2)} KB
+                        </p>
+                        <p className="text-xs text-green-600">
+                          Backup de ajustes detectado correctamente
+                        </p>
+                      </div>
+                    )}
+                    
+                    {!fileValidation.settingsFileValid && fileValidation.settingsFileError && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <p className="text-sm font-medium text-red-800">
+                          ❌ Archivo inválido
+                        </p>
+                        <p className="text-xs text-red-600 mt-1">
+                          {fileValidation.settingsFileError}
+                        </p>
+                      </div>
+                    )}
+                    
+                    <Button 
+                      onClick={handleSettingsRestore}
+                      disabled={!selectedFiles.settingsFile || !fileValidation.settingsFileValid || loading.settingsRestore}
+                      className="w-full"
+                      variant="destructive"
+                    >
+                      {loading.settingsRestore ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Importando...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4 mr-2" />
+                          Restaurar Ajustes
+                        </>
+                      )}
+                    </Button>
+                    
                     <p className="text-xs text-gray-500 text-center">
                       Formatos aceptados: .json
                     </p>
