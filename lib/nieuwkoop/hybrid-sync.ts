@@ -566,55 +566,54 @@ export class HybridSync {
             subcategoryOriginal: subcategoryEN
           }
 
+          // Generar slug único para nuevos productos
+          const baseSlug = nieuwkoopProduct.Description
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+            .trim()
+          const slug = `${baseSlug}-${nieuwkoopProduct.Itemcode.toLowerCase()}`
+
+          // Usar upsert para evitar problemas con replica set
+          const result = await prisma.product.upsert({
+            where: { sku: nieuwkoopProduct.Itemcode },
+            update: {
+              name: nieuwkoopProduct.Description,
+              description: nieuwkoopProduct.ItemDescription_EN || nieuwkoopProduct.ItemDescription_NL,
+              category,
+              subcategory,
+              basePrice: nieuwkoopProduct.Salesprice, // Usar Salesprice del API
+              stock: 0, // Stock se obtiene en tiempo real
+              images,
+              specifications,
+              active: nieuwkoopProduct.ShowOnWebsite && nieuwkoopProduct.ItemStatus === 'A',
+              sysmodified: nieuwkoopProduct.Sysmodified,
+              updatedAt: new Date()
+            },
+            create: {
+              nieuwkoopId: nieuwkoopProduct.Itemcode,
+              sku: nieuwkoopProduct.Itemcode,
+              slug: slug,
+              name: nieuwkoopProduct.Description,
+              description: nieuwkoopProduct.ItemDescription_EN || nieuwkoopProduct.ItemDescription_NL,
+              category,
+              subcategory,
+              basePrice: nieuwkoopProduct.Salesprice, // Usar Salesprice del API
+              stock: 0, // Stock se obtiene en tiempo real
+              images,
+              specifications,
+              active: nieuwkoopProduct.ShowOnWebsite && nieuwkoopProduct.ItemStatus === 'A',
+              sysmodified: nieuwkoopProduct.Sysmodified,
+              createdAt: new Date(),
+              updatedAt: new Date()
+            }
+          })
+          
+          // Contar si fue actualización o creación
           if (existingProduct) {
-            // Actualizar producto existente
-            await prisma.product.update({
-              where: { id: existingProduct.id },
-              data: {
-                name: nieuwkoopProduct.Description,
-                description: nieuwkoopProduct.ItemDescription_EN || nieuwkoopProduct.ItemDescription_NL,
-                category,
-                subcategory,
-                basePrice: nieuwkoopProduct.Salesprice, // Usar Salesprice del API
-                stock: 0, // Stock se obtiene en tiempo real
-                images,
-                specifications,
-                active: nieuwkoopProduct.ShowOnWebsite && nieuwkoopProduct.ItemStatus === 'A',
-                sysmodified: nieuwkoopProduct.Sysmodified,
-                updatedAt: new Date()
-              }
-            })
             updatedProducts++
           } else {
-            // Generar slug único
-            const baseSlug = nieuwkoopProduct.Description
-              .toLowerCase()
-              .replace(/[^a-z0-9\s-]/g, '')
-              .replace(/\s+/g, '-')
-              .replace(/-+/g, '-')
-              .trim()
-            const slug = `${baseSlug}-${nieuwkoopProduct.Itemcode.toLowerCase()}`
-
-            // Crear nuevo producto
-            await prisma.product.create({
-              data: {
-                nieuwkoopId: nieuwkoopProduct.Itemcode,
-                sku: nieuwkoopProduct.Itemcode,
-                slug: slug,
-                name: nieuwkoopProduct.Description,
-                description: nieuwkoopProduct.ItemDescription_EN || nieuwkoopProduct.ItemDescription_NL,
-                category,
-                subcategory,
-                basePrice: nieuwkoopProduct.Salesprice, // Usar Salesprice del API
-                stock: 0, // Stock se obtiene en tiempo real
-                images,
-                specifications,
-                active: nieuwkoopProduct.ShowOnWebsite && nieuwkoopProduct.ItemStatus === 'A',
-                sysmodified: nieuwkoopProduct.Sysmodified,
-                createdAt: new Date(),
-                updatedAt: new Date()
-              }
-            })
             newProducts++
           }
           } catch (error) {
