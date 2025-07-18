@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { MongoClient } from 'mongodb'
 
 export async function POST() {
   try {
@@ -126,9 +127,13 @@ export async function POST() {
 
     console.log(`✅ Backup creado: ${backup.metadata.totalRecords} registros`)
 
-    // Registrar en logs
-    await prisma.syncLog.create({
-      data: {
+    // Registrar en logs usando MongoDB nativo
+    try {
+      const logClient = new MongoClient(process.env.DATABASE_URL!)
+      await logClient.connect()
+      const logDb = logClient.db()
+      
+      await logDb.collection('sync_logs').insertOne({
         type: 'backup-database',
         status: 'success',
         productsProcessed: backup.metadata.totalRecords,
@@ -139,9 +144,16 @@ export async function POST() {
             count: backup.collections[key as keyof typeof backup.collections].count
           })),
           size: `${(buffer.length / 1024 / 1024).toFixed(2)} MB`
-        }
-      }
-    })
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      
+      await logClient.close()
+    } catch (logError) {
+      console.warn('Error logging backup success:', logError)
+      // Continuar con el backup aunque el log falle
+    }
 
     // Devolver el archivo
     return new NextResponse(buffer, {
@@ -155,17 +167,28 @@ export async function POST() {
   } catch (error) {
     console.error('❌ Error creando backup:', error)
     
-    await prisma.syncLog.create({
-      data: {
+    // Registrar error usando MongoDB nativo
+    try {
+      const logClient = new MongoClient(process.env.DATABASE_URL!)
+      await logClient.connect()
+      const logDb = logClient.db()
+      
+      await logDb.collection('sync_logs').insertOne({
         type: 'backup-database',
         status: 'error',
         productsProcessed: 0,
         errors: 1,
         metadata: {
           error: error instanceof Error ? error.message : 'Unknown error'
-        }
-      }
-    })
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      
+      await logClient.close()
+    } catch (logError) {
+      console.error('Error logging backup failure:', logError)
+    }
 
     return NextResponse.json({ 
       error: 'Error creando backup',

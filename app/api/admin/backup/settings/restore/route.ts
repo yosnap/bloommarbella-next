@@ -84,6 +84,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Registrar en logs usando MongoDB nativo
+    await db.collection('sync_logs').insertOne({
+      type: 'restore-settings',
+      status: errors.length > 0 ? 'partial' : 'success',
+      productsProcessed: restoredCount,
+      errors: errors.length,
+      metadata: {
+        backupVersion: backup.version,
+        backupDate: backup.timestamp,
+        restoredBy: session.user.email,
+        restoredSettings,
+        errors: errors.length > 0 ? errors : undefined
+      },
+      createdAt: new Date(),
+      updatedAt: new Date()
+    })
+    
     await client.close()
 
     // Si hay ajustes de sincronización restaurados, reiniciar el scheduler
@@ -92,23 +109,6 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`✅ Restauración de ajustes completada: ${restoredCount} configuraciones`)
-
-    // Registrar en logs
-    await prisma.syncLog.create({
-      data: {
-        type: 'restore-settings',
-        status: errors.length > 0 ? 'partial' : 'success',
-        productsProcessed: restoredCount,
-        errors: errors.length,
-        metadata: {
-          backupVersion: backup.version,
-          backupDate: backup.timestamp,
-          restoredBy: session.user.email,
-          restoredSettings,
-          errors: errors.length > 0 ? errors : undefined
-        }
-      }
-    })
 
     // Limpiar caché si se restauró configuración de caché
     if (restoredSettings.includes('enableCache') || restoredSettings.includes('cacheTime')) {
@@ -129,17 +129,28 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ Error restaurando ajustes:', error)
     
-    await prisma.syncLog.create({
-      data: {
+    // Registrar error usando MongoDB nativo
+    try {
+      const client = new MongoClient(process.env.DATABASE_URL!)
+      await client.connect()
+      const db = client.db()
+      
+      await db.collection('sync_logs').insertOne({
         type: 'restore-settings',
         status: 'error',
         productsProcessed: 0,
         errors: 1,
         metadata: {
           error: error instanceof Error ? error.message : 'Unknown error'
-        }
-      }
-    })
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      
+      await client.close()
+    } catch (logError) {
+      console.error('Error logging restore failure:', logError)
+    }
 
     return NextResponse.json({ 
       error: 'Error restaurando ajustes',

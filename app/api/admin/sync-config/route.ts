@@ -187,22 +187,22 @@ export async function POST(request: NextRequest) {
       { upsert: true }
     )
     
-    await client.close()
-
-    // Registrar cambio en logs
-    await prisma.syncLog.create({
-      data: {
-        type: 'config-update',
-        status: 'success',
-        productsProcessed: 0,
-        errors: 0,
-        metadata: {
-          configType,
-          updatedBy: session.user.email,
-          changes: value
-        }
-      }
+    // Registrar cambio en logs usando MongoDB nativo
+    await db.collection('sync_logs').insertOne({
+      type: 'config-update',
+      status: 'success',
+      productsProcessed: 0,
+      errors: 0,
+      metadata: {
+        configType,
+        updatedBy: session.user.email,
+        changes: value
+      },
+      createdAt: new Date(),
+      updatedAt: new Date()
     })
+    
+    await client.close()
 
     return NextResponse.json({ 
       success: true,
