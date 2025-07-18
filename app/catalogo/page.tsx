@@ -123,21 +123,23 @@ function CatalogContent() {
     }
   }, [products, pricingConfig])
 
-  // Debug logging
-  console.log('🔍 Pagination debug:', {
-    currentPage,
-    totalPages,
-    totalProducts,
-    hasNextPage,
-    hasPrevPage,
-    paginationFromAPI: productsData?.pagination,
-    isLoading: loading,
-    isFetching,
-    isPreviousData,
-    dynamicRanges,
-    advancedFilters,
-    productsCount: products.length
-  })
+  // Debug logging (solo cuando cambia realmente)
+  useEffect(() => {
+    console.log('🔍 Pagination debug:', {
+      currentPage,
+      totalPages,
+      totalProducts,
+      hasNextPage,
+      hasPrevPage,
+      paginationFromAPI: productsData?.pagination,
+      isLoading: loading,
+      isFetching,
+      isPreviousData,
+      dynamicRanges,
+      advancedFilters,
+      productsCount: products.length
+    })
+  }, [currentPage, totalPages, totalProducts])
 
   // Estado para controlar si es la primera carga
   const [isInitialLoad, setIsInitialLoad] = useState(true)
