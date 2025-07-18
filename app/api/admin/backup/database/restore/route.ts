@@ -96,6 +96,7 @@ export async function POST(request: NextRequest) {
       await db.collection('category_visibility').deleteMany({})
       await db.collection('translations').deleteMany({})
       await db.collection('products').deleteMany({})
+      await db.collection('configurations').deleteMany({})
       
       // Para usuarios, mantener el admin actual
       await db.collection('users').deleteMany({
@@ -167,7 +168,13 @@ export async function POST(request: NextRequest) {
               updatedAt: new Date(config.updatedAt),
             }
             
-            await db.collection('configurations').insertOne(configData)
+            // Usar replaceOne con upsert para evitar errores de duplicados
+            const result = await db.collection('configurations').replaceOne(
+              { key: config.key },
+              configData,
+              { upsert: true }
+            )
+            
             restoredCount++
           } catch (err) {
             const errorMsg = `Error restaurando configuración ${config.key}: ${err}`
