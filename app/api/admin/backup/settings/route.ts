@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { MongoClient } from 'mongodb'
 
 // Lista de claves de configuración que se incluyen en el backup de ajustes
 const SETTINGS_KEYS = [
@@ -109,9 +110,13 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ Backup de ajustes creado: ${configurations.length} configuraciones`)
 
-    // Registrar en logs
-    await prisma.syncLog.create({
-      data: {
+    // Registrar en logs usando MongoDB nativo
+    try {
+      const logClient = new MongoClient(process.env.DATABASE_URL!)
+      await logClient.connect()
+      const logDb = logClient.db()
+      
+      await logDb.collection('sync_logs').insertOne({
         type: 'backup-settings',
         status: 'success',
         productsProcessed: configurations.length,
@@ -119,9 +124,16 @@ export async function POST(request: NextRequest) {
         metadata: {
           settings: configurations.map(c => c.key),
           size: `${(buffer.length / 1024).toFixed(2)} KB`
-        }
-      }
-    })
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      
+      await logClient.close()
+    } catch (logError) {
+      console.warn('Error logging settings backup success:', logError)
+      // Continuar con el backup aunque el log falle
+    }
 
     // Devolver el archivo
     return new NextResponse(buffer, {
@@ -135,17 +147,28 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ Error creando backup de ajustes:', error)
     
-    await prisma.syncLog.create({
-      data: {
+    // Registrar error usando MongoDB nativo
+    try {
+      const logClient = new MongoClient(process.env.DATABASE_URL!)
+      await logClient.connect()
+      const logDb = logClient.db()
+      
+      await logDb.collection('sync_logs').insertOne({
         type: 'backup-settings',
         status: 'error',
         productsProcessed: 0,
         errors: 1,
         metadata: {
           error: error instanceof Error ? error.message : 'Unknown error'
-        }
-      }
-    })
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      
+      await logClient.close()
+    } catch (logError) {
+      console.error('Error logging settings backup failure:', logError)
+    }
 
     return NextResponse.json({ 
       error: 'Error creando backup de ajustes',

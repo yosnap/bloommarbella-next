@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { MongoClient } from 'mongodb'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 
     // Obtener el archivo del FormData
     const formData = await request.formData()
-    const file = formData.get('backup') as File
+    const file = formData.get('database') as File
     
     if (!file) {
       return NextResponse.json({ error: 'No se proporcionó archivo' }, { status: 400 })
@@ -41,51 +41,56 @@ export async function POST(request: NextRequest) {
     let restoredCount = 0
     const errors: string[] = []
 
-    // Iniciar transacción
+    // Conectar a MongoDB usando driver nativo
+    const client = new MongoClient(process.env.DATABASE_URL!)
+    await client.connect()
+    const db = client.db()
+
     try {
       // IMPORTANTE: Restaurar en orden para respetar las relaciones
       
       // 1. Limpiar datos actuales (excepto el usuario admin actual)
       console.log('🗑️ Limpiando datos actuales...')
       
-      await prisma.favorite.deleteMany()
-      await prisma.syncLog.deleteMany()
-      await prisma.categoryVisibility.deleteMany()
-      await prisma.translation.deleteMany()
-      await prisma.product.deleteMany()
+      await db.collection('favorites').deleteMany({})
+      await db.collection('sync_logs').deleteMany({})
+      await db.collection('category_visibility').deleteMany({})
+      await db.collection('translations').deleteMany({})
+      await db.collection('products').deleteMany({})
       
       // Para usuarios, mantener el admin actual
-      await prisma.user.deleteMany({
-        where: {
-          email: {
-            not: session.user.email
-          }
-        }
+      await db.collection('users').deleteMany({
+        email: { $ne: session.user.email }
       })
 
-      // 2. Restaurar usuarios (excepto el admin actual)
+      // 2. Restaurar usuarios primero (excepto el admin actual)
       if (backup.collections.users?.data) {
         console.log(`👥 Restaurando ${backup.collections.users.count} usuarios...`)
-        const usersToRestore = backup.collections.users.data.filter(
-          (user: any) => user.email !== session.user.email
-        )
-        
-        for (const user of usersToRestore) {
+        for (const user of backup.collections.users.data) {
+          // No restaurar el usuario admin actual para evitar conflictos
+          if (user.email === session.user.email) {
+            console.log(`⏭️ Omitiendo usuario admin actual: ${user.email}`)
+            continue
+          }
+          
           try {
-            await prisma.user.create({
-              data: {
-                ...user,
-                emailVerified: user.emailVerified ? new Date(user.emailVerified) : null,
-                createdAt: new Date(user.createdAt),
-                updatedAt: new Date(user.updatedAt),
-                associateRequestDate: user.associateRequestDate ? new Date(user.associateRequestDate) : null,
-                associateApprovalDate: user.associateApprovalDate ? new Date(user.associateApprovalDate) : null,
-                lastLogin: user.lastLogin ? new Date(user.lastLogin) : null
-              }
-            })
+            // Convertir fechas string a Date objects
+            const userData = {
+              ...user,
+              createdAt: new Date(user.createdAt),
+              updatedAt: new Date(user.updatedAt),
+              emailVerified: user.emailVerified ? new Date(user.emailVerified) : null,
+              lastLogin: user.lastLogin ? new Date(user.lastLogin) : null,
+              associateRequestDate: user.associateRequestDate ? new Date(user.associateRequestDate) : null,
+              associateApprovalDate: user.associateApprovalDate ? new Date(user.associateApprovalDate) : null,
+            }
+            
+            await db.collection('users').insertOne(userData)
             restoredCount++
           } catch (err) {
-            errors.push(`Error restaurando usuario ${user.email}: ${err}`)
+            const errorMsg = `Error restaurando usuario ${user.email}: ${err}`
+            errors.push(errorMsg)
+            console.error(errorMsg)
           }
         }
       }
@@ -95,16 +100,19 @@ export async function POST(request: NextRequest) {
         console.log(`📦 Restaurando ${backup.collections.products.count} productos...`)
         for (const product of backup.collections.products.data) {
           try {
-            await prisma.product.create({
-              data: {
-                ...product,
-                createdAt: new Date(product.createdAt),
-                updatedAt: new Date(product.updatedAt)
-              }
-            })
+            const productData = {
+              ...product,
+              createdAt: new Date(product.createdAt),
+              updatedAt: new Date(product.updatedAt),
+              lastStockCheck: product.lastStockCheck ? new Date(product.lastStockCheck) : null,
+            }
+            
+            await db.collection('products').insertOne(productData)
             restoredCount++
           } catch (err) {
-            errors.push(`Error restaurando producto ${product.itemCode}: ${err}`)
+            const errorMsg = `Error restaurando producto ${product.sku}: ${err}`
+            errors.push(errorMsg)
+            console.error(errorMsg)
           }
         }
       }
@@ -114,84 +122,79 @@ export async function POST(request: NextRequest) {
         console.log(`⚙️ Restaurando ${backup.collections.configurations.count} configuraciones...`)
         for (const config of backup.collections.configurations.data) {
           try {
-            await prisma.configuration.upsert({
-              where: { key: config.key },
-              update: {
-                value: config.value,
-                description: config.description,
-                updatedAt: new Date()
-              },
-              create: {
-                ...config,
-                createdAt: new Date(config.createdAt),
-                updatedAt: new Date(config.updatedAt)
-              }
-            })
+            const configData = {
+              ...config,
+              createdAt: config.createdAt ? new Date(config.createdAt) : new Date(),
+              updatedAt: new Date(config.updatedAt),
+            }
+            
+            await db.collection('configurations').insertOne(configData)
             restoredCount++
           } catch (err) {
-            errors.push(`Error restaurando configuración ${config.key}: ${err}`)
+            const errorMsg = `Error restaurando configuración ${config.key}: ${err}`
+            errors.push(errorMsg)
+            console.error(errorMsg)
           }
         }
       }
 
       // 5. Restaurar traducciones
       if (backup.collections.translations?.data) {
-        console.log(`🌐 Restaurando ${backup.collections.translations.count} traducciones...`)
+        console.log(`🌍 Restaurando ${backup.collections.translations.count} traducciones...`)
         for (const translation of backup.collections.translations.data) {
           try {
-            await prisma.translation.create({
-              data: {
-                ...translation,
-                createdAt: new Date(translation.createdAt),
-                updatedAt: new Date(translation.updatedAt)
-              }
-            })
+            const translationData = {
+              ...translation,
+              createdAt: new Date(translation.createdAt),
+              updatedAt: new Date(translation.updatedAt),
+            }
+            
+            await db.collection('translations').insertOne(translationData)
             restoredCount++
           } catch (err) {
-            errors.push(`Error restaurando traducción: ${err}`)
+            const errorMsg = `Error restaurando traducción: ${err}`
+            errors.push(errorMsg)
+            console.error(errorMsg)
           }
         }
       }
 
       // 6. Restaurar visibilidad de categorías
       if (backup.collections.categoryVisibility?.data) {
-        console.log(`🏷️ Restaurando ${backup.collections.categoryVisibility.count} categorías...`)
+        console.log(`📂 Restaurando ${backup.collections.categoryVisibility.count} categorías...`)
         for (const category of backup.collections.categoryVisibility.data) {
           try {
-            await prisma.categoryVisibility.create({
-              data: {
-                ...category,
-                createdAt: new Date(category.createdAt),
-                updatedAt: new Date(category.updatedAt)
-              }
-            })
+            const categoryData = {
+              ...category,
+              createdAt: new Date(category.createdAt),
+              updatedAt: new Date(category.updatedAt),
+            }
+            
+            await db.collection('category_visibility').insertOne(categoryData)
             restoredCount++
           } catch (err) {
-            errors.push(`Error restaurando categoría ${category.englishName}: ${err}`)
+            const errorMsg = `Error restaurando categoría ${category.englishName}: ${err}`
+            errors.push(errorMsg)
+            console.error(errorMsg)
           }
         }
       }
 
       // 7. Restaurar favoritos
       if (backup.collections.favorites?.data) {
-        console.log(`⭐ Restaurando ${backup.collections.favorites.count} favoritos...`)
+        console.log(`❤️ Restaurando ${backup.collections.favorites.count} favoritos...`)
         for (const favorite of backup.collections.favorites.data) {
           try {
-            // Verificar que el usuario y producto existan
-            const userExists = await prisma.user.findUnique({ where: { id: favorite.userId } })
-            const productExists = await prisma.product.findUnique({ where: { id: favorite.productId } })
-            
-            if (userExists && productExists) {
-              await prisma.favorite.create({
-                data: {
-                  ...favorite,
-                  createdAt: new Date(favorite.createdAt)
-                }
-              })
-              restoredCount++
+            const favoriteData = {
+              ...favorite,
+              createdAt: new Date(favorite.createdAt),
             }
+            
+            await db.collection('favorites').insertOne(favoriteData)
+            restoredCount++
           } catch (err) {
-            errors.push(`Error restaurando favorito: ${err}`)
+            // Los favoritos no son críticos, solo registrar
+            console.warn(`Error restaurando favorito: ${err}`)
           }
         }
       }
@@ -202,13 +205,13 @@ export async function POST(request: NextRequest) {
         const recentLogs = backup.collections.syncLogs.data.slice(0, 100) // Solo los últimos 100
         for (const log of recentLogs) {
           try {
-            await prisma.syncLog.create({
-              data: {
-                ...log,
-                createdAt: new Date(log.createdAt),
-                updatedAt: new Date(log.updatedAt)
-              }
-            })
+            const logData = {
+              ...log,
+              createdAt: new Date(log.createdAt),
+              updatedAt: log.updatedAt ? new Date(log.updatedAt) : new Date(),
+            }
+            
+            await db.collection('sync_logs').insertOne(logData)
             restoredCount++
           } catch (err) {
             // Los logs no son críticos, solo registrar
@@ -219,50 +222,61 @@ export async function POST(request: NextRequest) {
 
       console.log(`✅ Restauración completada: ${restoredCount} registros`)
 
-      // Registrar en logs
-      await prisma.syncLog.create({
-        data: {
-          type: 'restore-database',
-          status: errors.length > 0 ? 'partial' : 'success',
-          productsProcessed: restoredCount,
-          errors: errors.length,
-          metadata: {
-            backupVersion: backup.version,
-            backupDate: backup.timestamp,
-            restoredBy: session.user.email,
-            errors: errors.length > 0 ? errors.slice(0, 10) : undefined // Solo primeros 10 errores
-          }
-        }
-      })
-
-      return NextResponse.json({ 
-        success: true,
-        restored: restoredCount,
+      // Registrar en logs usando MongoDB nativo
+      await db.collection('sync_logs').insertOne({
+        type: 'restore-database',
+        status: errors.length > 0 ? 'partial' : 'success',
+        productsProcessed: restoredCount,
         errors: errors.length,
-        message: errors.length > 0 
-          ? `Restauración parcial: ${restoredCount} registros restaurados, ${errors.length} errores`
-          : `Restauración completa: ${restoredCount} registros restaurados`
+        metadata: {
+          backupVersion: backup.version,
+          backupDate: backup.timestamp,
+          restoredBy: session.user.email,
+          totalRecords: backup.metadata?.totalRecords || restoredCount,
+          errors: errors.length > 0 ? errors.slice(0, 10) : undefined // Solo los primeros 10 errores
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
       })
 
-    } catch (error) {
-      console.error('❌ Error durante la restauración:', error)
-      throw error
+    } finally {
+      await client.close()
     }
 
+    return NextResponse.json({ 
+      success: true,
+      restored: restoredCount,
+      errors: errors.length,
+      message: errors.length > 0 
+        ? `Restauración parcial: ${restoredCount} registros restaurados, ${errors.length} errores`
+        : `Restauración completa: ${restoredCount} registros restaurados correctamente`
+    })
+
   } catch (error) {
-    console.error('❌ Error restaurando backup:', error)
+    console.error('❌ Error durante la restauración:', error)
     
-    await prisma.syncLog.create({
-      data: {
+    // Registrar error usando MongoDB nativo
+    try {
+      const logClient = new MongoClient(process.env.DATABASE_URL!)
+      await logClient.connect()
+      const logDb = logClient.db()
+      
+      await logDb.collection('sync_logs').insertOne({
         type: 'restore-database',
         status: 'error',
         productsProcessed: 0,
         errors: 1,
         metadata: {
           error: error instanceof Error ? error.message : 'Unknown error'
-        }
-      }
-    })
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      
+      await logClient.close()
+    } catch (logError) {
+      console.error('Error logging restore failure:', logError)
+    }
 
     return NextResponse.json({ 
       error: 'Error restaurando backup',

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { hybridSync } from '@/lib/nieuwkoop/hybrid-sync'
 import { prisma } from '@/lib/prisma'
+import { MongoClient } from 'mongodb'
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,21 +46,31 @@ export async function POST(request: NextRequest) {
         )
     }
 
-    // Registrar la sincronización
-    await prisma.syncLog.create({
-      data: {
+    // Registrar la sincronización usando MongoDB nativo
+    try {
+      const logClient = new MongoClient(process.env.DATABASE_URL!)
+      await logClient.connect()
+      const logDb = logClient.db()
+      
+      await logDb.collection('sync_logs').insertOne({
         type: `hybrid-${type}`,
         status: result.errors > 0 ? 'partial' : 'success',
         productsProcessed: result.newProducts + result.updatedProducts,
         errors: result.errors,
-        createdAt: new Date(),
         metadata: {
           newProducts: result.newProducts,
           updatedProducts: result.updatedProducts,
           totalErrors: result.errors
-        }
-      }
-    })
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      
+      await logClient.close()
+    } catch (logError) {
+      console.warn('Error logging hybrid sync success:', logError)
+      // Continuar aunque el log falle
+    }
 
     return NextResponse.json({
       success: true,
@@ -77,20 +88,29 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Error en sincronización híbrida:', error)
     
-    // Registrar error en logs
-    await prisma.syncLog.create({
-      data: {
+    // Registrar error en logs usando MongoDB nativo
+    try {
+      const logClient = new MongoClient(process.env.DATABASE_URL!)
+      await logClient.connect()
+      const logDb = logClient.db()
+      
+      await logDb.collection('sync_logs').insertOne({
         type: 'hybrid-error',
         status: 'error',
         productsProcessed: 0,
         errors: 1,
-        createdAt: new Date(),
         metadata: {
           error: error.message,
           stack: error.stack
-        }
-      }
-    }).catch(console.error)
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      
+      await logClient.close()
+    } catch (logError) {
+      console.error('Error logging hybrid sync failure:', logError)
+    }
 
     return NextResponse.json(
       { 
