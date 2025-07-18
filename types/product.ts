@@ -68,6 +68,7 @@ export interface ProductCardProps {
     associateDiscount: number
     vatRate: number
   }
+  whatsappConfig?: any
 }
 
 export interface ProductsResponse {

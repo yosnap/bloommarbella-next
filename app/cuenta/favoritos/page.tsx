@@ -8,6 +8,7 @@ import { useFavorites } from '@/contexts/favorites-context'
 import { useUserPricing } from '@/hooks/use-user-pricing'
 import { ProductCard } from '@/components/products/product-card'
 import { useState, useEffect } from 'react'
+import { getProductImageUrls } from '@/lib/utils/images'
 
 export default function FavoritosPage() {
   const { user, isLoading, isAuthenticated } = useAuth()
@@ -138,9 +139,15 @@ export default function FavoritosPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {favorites.map((favorite, index) => {
+                  // Generate images dynamically using nieuwkoopId
+                  const productImages = favorite.product.images && favorite.product.images.length > 0 
+                    ? favorite.product.images 
+                    : getProductImageUrls(favorite.product.nieuwkoopId || favorite.product.sku)
+                    
                   // Transform FavoriteProduct to Product format
                   const product = {
                     ...favorite.product,
+                    images: productImages, // Use generated images
                     availability: 'in_stock' as const,
                     tags: [],
                     displayPrice: favorite.product.basePrice,

@@ -100,12 +100,21 @@ export function useProductsQuery(filters: ProductsFilters = {}) {
       const queryString = buildQueryString(filters)
       const url = `/api/products?${queryString}`
       
+      console.log('🔍 Fetching products with URL:', url)
+      console.log('🔍 Filters:', filters)
+      
       const response = await fetch(url)
       if (!response.ok) {
         throw new Error('Error al cargar productos')
       }
       
-      return response.json()
+      const data = await response.json()
+      console.log('🔍 Products response:', {
+        productsCount: data.data?.length || 0,
+        pagination: data.pagination
+      })
+      
+      return data
     },
     staleTime: cacheSettings.pricesStaleTime, // Configurable desde admin
     gcTime: cacheSettings.pricesGcTime, // Configurable desde admin

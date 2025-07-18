@@ -157,10 +157,10 @@ export async function generateCatalogUrl(filters: {
   }
   const ranges = dynamicRanges || defaultRanges
 
-  // Verificar si hay filtros avanzados activos comparando con rangos dinámicos
-  const isPriceFiltered = priceRange && (priceRange[0] > ranges.priceRange.min || priceRange[1] < ranges.priceRange.max)
-  const isHeightFiltered = heightRange && (heightRange[0] > ranges.heightRange.min || heightRange[1] < ranges.heightRange.max)
-  const isWidthFiltered = widthRange && (widthRange[0] > ranges.widthRange.min || widthRange[1] < ranges.widthRange.max)
+  // Verificar si hay filtros avanzados activos
+  const isPriceFiltered = priceRange !== undefined
+  const isHeightFiltered = heightRange !== undefined
+  const isWidthFiltered = widthRange !== undefined
   
   const hasAdvancedFilters = isPriceFiltered || isHeightFiltered || isWidthFiltered || inStock || 
     location?.length || plantingSystem?.length || colors?.length || advancedCategories?.length
@@ -290,9 +290,9 @@ export function parseFiltersFromUrl(pathname: string, searchParams: URLSearchPar
   sortOrder: string
   itemsPerPage: number
   // Filtros avanzados
-  priceRange: [number, number]
-  heightRange: [number, number]
-  widthRange: [number, number]
+  priceRange: [number, number] | undefined
+  heightRange: [number, number] | undefined
+  widthRange: [number, number] | undefined
   inStock: boolean
   location: string[]
   plantingSystem: string[]
@@ -307,10 +307,10 @@ export function parseFiltersFromUrl(pathname: string, searchParams: URLSearchPar
     sortBy: 'alphabetical',
     sortOrder: 'asc',
     itemsPerPage: 15,
-    // Filtros avanzados
-    priceRange: [0, 500] as [number, number],
-    heightRange: [0, 200] as [number, number],
-    widthRange: [0, 100] as [number, number],
+    // Filtros avanzados - sin valores por defecto
+    priceRange: undefined as [number, number] | undefined,
+    heightRange: undefined as [number, number] | undefined,
+    widthRange: undefined as [number, number] | undefined,
     inStock: false,
     location: [] as string[],
     plantingSystem: [] as string[],
@@ -392,26 +392,26 @@ export function parseFiltersFromUrl(pathname: string, searchParams: URLSearchPar
     }
   }
 
-  // Procesar filtros avanzados
-  if (priceMinParam || priceMaxParam) {
-    const priceMin = priceMinParam ? parseInt(priceMinParam) : 0
-    const priceMax = priceMaxParam ? parseInt(priceMaxParam) : 500
+  // Procesar filtros avanzados - solo si están explícitamente en la URL
+  if (priceMinParam && priceMaxParam) {
+    const priceMin = parseInt(priceMinParam)
+    const priceMax = parseInt(priceMaxParam)
     if (!isNaN(priceMin) && !isNaN(priceMax)) {
       result.priceRange = [priceMin, priceMax]
     }
   }
 
-  if (heightMinParam || heightMaxParam) {
-    const heightMin = heightMinParam ? parseInt(heightMinParam) : 0
-    const heightMax = heightMaxParam ? parseInt(heightMaxParam) : 200
+  if (heightMinParam && heightMaxParam) {
+    const heightMin = parseInt(heightMinParam)
+    const heightMax = parseInt(heightMaxParam)
     if (!isNaN(heightMin) && !isNaN(heightMax)) {
       result.heightRange = [heightMin, heightMax]
     }
   }
 
-  if (widthMinParam || widthMaxParam) {
-    const widthMin = widthMinParam ? parseInt(widthMinParam) : 0
-    const widthMax = widthMaxParam ? parseInt(widthMaxParam) : 100
+  if (widthMinParam && widthMaxParam) {
+    const widthMin = parseInt(widthMinParam)
+    const widthMax = parseInt(widthMaxParam)
     if (!isNaN(widthMin) && !isNaN(widthMax)) {
       result.widthRange = [widthMin, widthMax]
     }

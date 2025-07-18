@@ -6,9 +6,9 @@ import { RangeSlider } from '@/components/ui/range-slider'
 import { useCategoryTranslations } from '@/hooks/use-translations'
 
 interface FilterState {
-  priceRange: [number, number]
-  heightRange: [number, number]
-  widthRange: [number, number]
+  priceRange: [number, number] | undefined
+  heightRange: [number, number] | undefined
+  widthRange: [number, number] | undefined
   inStock: boolean
   location: string[]
   plantingSystem: string[]
@@ -26,6 +26,11 @@ interface AdvancedFiltersProps {
   filters: FilterState
   onFiltersChange: (filters: FilterState) => void
   products: any[]
+  dynamicRanges?: {
+    priceRange: { min: number; max: number }
+    heightRange: { min: number; max: number }
+    widthRange: { min: number; max: number }
+  }
 }
 
 interface ColorOption {
@@ -55,7 +60,7 @@ const plantingSystemOptions = [
   { value: 'artificial', label: 'Artificial glued', icon: '🎨' }
 ]
 
-export const AdvancedFilters = memo(function AdvancedFilters({ filters, onFiltersChange, products }: AdvancedFiltersProps) {
+export const AdvancedFilters = memo(function AdvancedFilters({ filters, onFiltersChange, products, dynamicRanges }: AdvancedFiltersProps) {
   const [expandedSections, setExpandedSections] = useState<string[]>(['dimensions'])
   const [categories, setCategories] = useState<CategoryData[]>([])
   const [expandedCategories, setExpandedCategories] = useState<string[]>([])
@@ -117,9 +122,9 @@ export const AdvancedFilters = memo(function AdvancedFilters({ filters, onFilter
   const isFilterActive = (filterType: string) => {
     switch (filterType) {
       case 'dimensions':
-        return filters.priceRange[0] > priceRange.min || filters.priceRange[1] < priceRange.max ||
-               filters.heightRange[0] > heightRange.min || filters.heightRange[1] < heightRange.max ||
-               filters.widthRange[0] > widthRange.min || filters.widthRange[1] < widthRange.max
+        return filters.priceRange !== undefined || 
+               filters.heightRange !== undefined || 
+               filters.widthRange !== undefined
       case 'stock':
         return filters.inStock
       case 'location':
@@ -135,30 +140,28 @@ export const AdvancedFilters = memo(function AdvancedFilters({ filters, onFilter
     }
   }
 
-  // Calcular rangos dinámicos de productos
-  const priceRange = products.length > 0 ? {
+  // Usar rangos dinámicos proporcionados o calcular basados en productos
+  const priceRange = dynamicRanges?.priceRange || (products.length > 0 ? {
     min: Math.floor(Math.min(...products.map(p => p.basePrice * 2.5))),
     max: Math.ceil(Math.max(...products.map(p => p.basePrice * 2.5)))
-  } : { min: 0, max: 500 }
+  } : { min: 0, max: 5000 })
 
-  const heightRange = products.length > 0 ? {
+  const heightRange = dynamicRanges?.heightRange || (products.length > 0 ? {
     min: Math.floor(Math.min(...products.map(p => p.specifications?.height || 0))),
-    max: Math.ceil(Math.max(...products.map(p => p.specifications?.height || 200)))
-  } : { min: 0, max: 200 }
+    max: Math.ceil(Math.max(...products.map(p => p.specifications?.height || 300)))
+  } : { min: 0, max: 300 })
 
-  const widthRange = products.length > 0 ? {
+  const widthRange = dynamicRanges?.widthRange || (products.length > 0 ? {
     min: Math.floor(Math.min(...products.map(p => p.specifications?.width || 0))),
-    max: Math.ceil(Math.max(...products.map(p => p.specifications?.width || 100)))
-  } : { min: 0, max: 100 }
+    max: Math.ceil(Math.max(...products.map(p => p.specifications?.width || 200)))
+  } : { min: 0, max: 200 })
 
   // Mantener acordeones abiertos cuando hay filtros activos
   useEffect(() => {
     const activeFilters: string[] = []
     
     // Verificar cada filtro individualmente
-    if (filters.priceRange[0] > priceRange.min || filters.priceRange[1] < priceRange.max ||
-        filters.heightRange[0] > heightRange.min || filters.heightRange[1] < heightRange.max ||
-        filters.widthRange[0] > widthRange.min || filters.widthRange[1] < widthRange.max) {
+    if (filters.priceRange !== undefined || filters.heightRange !== undefined || filters.widthRange !== undefined) {
       activeFilters.push('dimensions')
     }
     if (filters.inStock) {
@@ -181,7 +184,7 @@ export const AdvancedFilters = memo(function AdvancedFilters({ filters, onFilter
       const newExpanded = [...new Set([...prev, ...activeFilters])]
       return newExpanded
     })
-  }, [filters, priceRange.min, priceRange.max, heightRange.min, heightRange.max, widthRange.min, widthRange.max])
+  }, [filters])
 
   const toggleSection = useCallback((section: string) => {
     setExpandedSections(prev => 
@@ -197,16 +200,16 @@ export const AdvancedFilters = memo(function AdvancedFilters({ filters, onFilter
 
   const handleClearAll = useCallback(() => {
     onFiltersChange({
-      priceRange: [priceRange.min, priceRange.max],
-      heightRange: [heightRange.min, heightRange.max],
-      widthRange: [widthRange.min, widthRange.max],
+      priceRange: undefined,
+      heightRange: undefined,
+      widthRange: undefined,
       inStock: false,
       location: [],
       plantingSystem: [],
       colors: [],
       categories: []
     })
-  }, [priceRange, heightRange, widthRange, onFiltersChange])
+  }, [onFiltersChange])
 
   const formatPrice = (value: number) => `€${value}`
   const formatDimension = (value: number) => `${value}cm`
@@ -260,7 +263,7 @@ export const AdvancedFilters = memo(function AdvancedFilters({ filters, onFilter
                 min={priceRange.min}
                 max={priceRange.max}
                 step={5}
-                value={filters.priceRange[0] === 0 && filters.priceRange[1] === 500 ? [priceRange.min, priceRange.max] : filters.priceRange}
+                value={filters.priceRange || [priceRange.min, priceRange.max]}
                 onValueCommit={(value) => updateFilters({ priceRange: value })}
                 formatLabel={formatPrice}
                 label="Price"
@@ -274,7 +277,7 @@ export const AdvancedFilters = memo(function AdvancedFilters({ filters, onFilter
                 min={heightRange.min}
                 max={heightRange.max}
                 step={5}
-                value={filters.heightRange[0] === 0 && filters.heightRange[1] === 200 ? [heightRange.min, heightRange.max] : filters.heightRange}
+                value={filters.heightRange || [heightRange.min, heightRange.max]}
                 onValueCommit={(value) => updateFilters({ heightRange: value })}
                 formatLabel={formatDimension}
                 label="Height"
@@ -288,7 +291,7 @@ export const AdvancedFilters = memo(function AdvancedFilters({ filters, onFilter
                 min={widthRange.min}
                 max={widthRange.max}
                 step={2}
-                value={filters.widthRange[0] === 0 && filters.widthRange[1] === 100 ? [widthRange.min, widthRange.max] : filters.widthRange}
+                value={filters.widthRange || [widthRange.min, widthRange.max]}
                 onValueCommit={(value) => updateFilters({ widthRange: value })}
                 formatLabel={formatDimension}
                 label="Width"

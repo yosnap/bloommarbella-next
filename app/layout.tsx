@@ -44,7 +44,7 @@ export default function RootLayout({
         className={cn(
           inter.variable,
           cormorant.variable,
-          "font-sans antialiased"
+          "font-sans antialiased pb-20 sm:pb-0"
         )}
         suppressHydrationWarning
       >

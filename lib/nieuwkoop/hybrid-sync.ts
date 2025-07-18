@@ -159,12 +159,15 @@ export class HybridSync {
     } = {}
   ) {
     const { 
-      category, categories, brands, search, page = 1, limit = 20, sortBy = 'name', sortOrder = 'asc',
+      category, categories, brands, search, page = 1, limit = 15, sortBy = 'alphabetical', sortOrder = 'asc',
       priceMin, priceMax, heightMin, heightMax, widthMin, widthMax, inStock,
       location, plantingSystem, colors, advancedCategories
     } = filters
 
     // Las categorías ya vienen en inglés original, usar directamente
+    console.log(`📄 getProductsWithRealtimeData - Page: ${page}, Limit: ${limit}, Filters:`, {
+      categories, brands, search, priceMin, priceMax, inStock
+    })
 
     // 1. Obtener productos base de MongoDB
     const where: any = { active: true }
@@ -263,26 +266,46 @@ export class HybridSync {
       (heightMin !== undefined || heightMax !== undefined) ||
       (widthMin !== undefined || widthMax !== undefined)
     
-    // Limitar a máximo 100 productos por página para evitar loops infinitos
-    const maxPerPage = 100
-    const actualLimit = Math.min(limit, maxPerPage)
+    // Mantener el límite solicitado
+    const actualLimit = limit
     
     let products: any[]
+    let totalCount: number
+    
     if (brands && brands.length > 0 || hasAdvancedFilters) {
-      // Para filtros de marca o filtros avanzados, obtenemos un máximo limitado
-      products = await prisma.product.findMany({
+      // Para filtros de marca o filtros avanzados, obtenemos todos los productos
+      // para poder filtrarlos en memoria correctamente
+      console.log(`📄 Obteniendo todos los productos para filtros avanzados...`)
+      const allProducts = await prisma.product.findMany({
         where,
-        take: actualLimit * 10, // Máximo 10 páginas para filtrar
         orderBy
       })
+      console.log(`📄 Total productos obtenidos: ${allProducts.length}`)
+      
+      // Procesaremos todos para obtener el total real después de filtros
+      products = allProducts
+      totalCount = allProducts.length // Se actualizará después de filtros en memoria
     } else {
       // Sin filtros avanzados, paginación normal
+      const skip = (page - 1) * actualLimit
+      console.log(`📄 Paginación normal - Page: ${page}, Skip: ${skip}, Take: ${actualLimit}`)
+      
+      totalCount = await prisma.product.count({ where })
+      console.log(`📄 Total productos en BD con where:`, where, `Total: ${totalCount}`)
+      
       products = await prisma.product.findMany({
         where,
-        skip: (page - 1) * actualLimit,
+        skip: skip,
         take: actualLimit,
         orderBy
       })
+      console.log(`📄 Productos obtenidos de BD: ${products.length} (esperados: ${actualLimit})`)
+      
+      if (products.length === 0 && totalCount > 0) {
+        console.error(`❌ ERROR: No se obtuvieron productos para página ${page} con skip=${skip}, take=${actualLimit}`)
+        console.error(`❌ Where clause:`, JSON.stringify(where))
+        console.error(`❌ OrderBy:`, JSON.stringify(orderBy))
+      }
     }
 
     // 2. Obtener datos en tiempo real para cada producto (solo para los productos paginados)
@@ -432,19 +455,24 @@ export class HybridSync {
       })
     }
 
-    // 5. Calcular total real para paginación correcta
-    let totalCount = finalProducts.length
-    
-    // Si no hay filtros avanzados ni de marcas, obtener el total real de la BD
-    if (!brands?.length && !hasAdvancedFilters) {
-      totalCount = await prisma.product.count({ where })
+    // 5. Actualizar total real después de todos los filtros
+    if (brands && brands.length > 0 || hasAdvancedFilters) {
+      totalCount = finalProducts.length
     }
     
     // 6. Aplicar paginación después de todos los filtros en memoria
-    const skip = (page - 1) * actualLimit
-    const paginatedProducts = finalProducts.slice(skip, skip + actualLimit)
+    let paginatedProducts = finalProducts
     
-    return {
+    // Solo aplicar slice si teníamos que obtener todos los productos (filtros avanzados)
+    if (brands && brands.length > 0 || hasAdvancedFilters) {
+      const skip = (page - 1) * actualLimit
+      paginatedProducts = finalProducts.slice(skip, skip + actualLimit)
+      console.log(`📄 Paginación en memoria - Skip: ${skip}, Total antes: ${finalProducts.length}, Después: ${paginatedProducts.length}`)
+    } else {
+      console.log(`📄 Productos ya paginados desde BD: ${paginatedProducts.length}`)
+    }
+    
+    const finalResult = {
       products: paginatedProducts,
       pagination: {
         page,
@@ -455,6 +483,13 @@ export class HybridSync {
         hasPrevPage: page > 1
       }
     }
+    
+    console.log(`📄 Resultado final:`, {
+      productsCount: finalResult.products.length,
+      pagination: finalResult.pagination
+    })
+    
+    return finalResult
   }
 
   /**

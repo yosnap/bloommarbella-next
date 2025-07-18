@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     // Parse query parameters
     const { searchParams } = new URL(request.url)
     const pageParam = searchParams.get('page') || '1'
-    const limitParam = searchParams.get('limit') || '20'
+    const limitParam = searchParams.get('limit') || '15'
     
     // Debug log
     console.log('📊 API params received:', { pageParam, limitParam })
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     const categories = searchParams.get('categories')
     const brands = searchParams.get('brands')
     const search = searchParams.get('search')
-    const sortBy = searchParams.get('sortBy') || 'name'
+    const sortBy = searchParams.get('sortBy') || 'alphabetical'
     const sortOrder = searchParams.get('sortOrder') || 'asc'
     
     // Parse advanced filter parameters
@@ -68,6 +68,7 @@ export async function GET(request: NextRequest) {
     const brandFilters = brands ? brands.split(',').map(b => b.trim()).filter(b => b) : []
     
     // Get products with real-time data
+    console.log(`📊 Calling getProductsWithRealtimeData with page=${page}, limit=${limit}`)
     const result = await hybridSync.getProductsWithRealtimeData({
       category: category || undefined,
       categories: categoryFilters,
@@ -89,6 +90,11 @@ export async function GET(request: NextRequest) {
       plantingSystem,
       colors,
       advancedCategories
+    })
+    
+    console.log(`📊 Result from hybrid sync:`, {
+      productsCount: result.products.length,
+      pagination: result.pagination
     })
 
     // Get pricing configuration

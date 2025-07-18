@@ -30,7 +30,8 @@ import {
   Phone,
   Mail,
   Calculator,
-  Heart
+  Heart,
+  BarChart3
 } from 'lucide-react'
 
 const navigation = [
@@ -204,45 +205,77 @@ export function Header() {
       
       {/* Top Bar */}
       <div className="bg-bloom-primary text-white py-2">
-        <div className="container flex justify-between items-center text-sm">
-          <div className="flex items-center space-x-4">
-            <span className="flex items-center">
-              <Phone className="h-4 w-4 mr-1" />
-              +34 952 123 456
-            </span>
-            <span className="flex items-center">
-              <Mail className="h-4 w-4 mr-1" />
-              info@bloommarbella.es
-            </span>
+        <div className="container">
+          {/* Desktop version */}
+          <div className="hidden md:flex justify-between items-center text-sm">
+            <div className="flex items-center space-x-4">
+              <span className="flex items-center">
+                <Phone className="h-4 w-4 mr-1" />
+                +34 952 123 456
+              </span>
+              <span className="flex items-center">
+                <Mail className="h-4 w-4 mr-1" />
+                info@bloommarbella.es
+              </span>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Link 
+                href="/asociados" 
+                className="text-white hover:text-bloom-secondary transition-colors"
+              >
+                Área Asociados
+              </Link>
+              {isAdmin && (
+                <>
+                  <span>|</span>
+                  <Link 
+                    href="/admin" 
+                    className="text-white hover:text-bloom-secondary transition-colors"
+                  >
+                    Admin
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
-          <div className="flex items-center space-x-4">
-            <Link 
-              href="/asociados" 
-              className="text-white hover:text-bloom-secondary transition-colors"
-            >
-              Área Asociados
-            </Link>
-            {isAdmin && (
-              <>
-                <span>|</span>
-                <Link 
-                  href="/admin" 
-                  className="text-white hover:text-bloom-secondary transition-colors"
-                >
-                  Admin
-                </Link>
-              </>
-            )}
+          
+          {/* Mobile version */}
+          <div className="md:hidden flex justify-center items-center text-xs">
+            <div className="flex items-center space-x-3">
+              <span className="flex items-center">
+                <Phone className="h-3 w-3 mr-1" />
+                952 123 456
+              </span>
+              <span>|</span>
+              <Link 
+                href="/asociados" 
+                className="text-white hover:text-bloom-secondary transition-colors"
+              >
+                Asociados
+              </Link>
+              {isAdmin && (
+                <>
+                  <span>|</span>
+                  <Link 
+                    href="/admin" 
+                    className="text-white hover:text-bloom-secondary transition-colors"
+                  >
+                    Admin
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Main Header */}
-      <div className="container py-4">
+      <div className="container py-3 md:py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link href="/">
-            <Logo size="lg" />
+          <Link href="/" className="flex-shrink-0">
+            <Logo size="lg" className="hidden sm:block" />
+            <Logo size="md" className="sm:hidden" />
           </Link>
 
           {/* Desktop Navigation */}
@@ -295,135 +328,138 @@ export function Header() {
 
           {/* Right Actions */}
           <div className="flex items-center space-x-4">
-            {/* Search */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="text-gray-600 hover:text-bloom-primary transition-colors"
-            >
-              <Search className="h-5 w-5" />
-            </Button>
+            {/* Desktop Actions */}
+            <div className="hidden sm:flex items-center space-x-4">
+              {/* Search */}
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-gray-600 hover:text-bloom-primary transition-colors"
+              >
+                <Search className="h-5 w-5" />
+              </Button>
 
-            {/* Favorites */}
-            <Link href="/cuenta/favoritos">
+              {/* Favorites */}
+              <Link href="/cuenta/favoritos">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-gray-600 hover:text-bloom-primary transition-colors relative"
+                >
+                  <Heart className="h-5 w-5" />
+                  {favoritesCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                      {favoritesCount > 99 ? '99+' : favoritesCount}
+                    </span>
+                  )}
+                </Button>
+              </Link>
+
+              {/* User Account */}
+              <div className="relative user-menu-container">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-gray-600 hover:text-bloom-primary transition-colors"
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                >
+                  <User className="h-5 w-5" />
+                </Button>
+                
+                {/* User Dropdown Menu */}
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border py-2 z-50">
+                    {isAuthenticated ? (
+                      <>
+                        <div className="px-4 py-2 border-b">
+                          <p className="text-sm font-medium text-gray-900">{user?.name || 'Usuario'}</p>
+                          <p className="text-xs text-gray-500">{user?.email}</p>
+                          {isAssociate && (
+                            <span className="inline-block mt-1 text-xs px-2 py-1 bg-bloom-secondary/10 text-bloom-secondary rounded-full">
+                              Asociado -{associateDiscount}%
+                            </span>
+                          )}
+                        </div>
+                        <Link
+                          href="/cuenta"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          Mi Cuenta
+                        </Link>
+                        <Link
+                          href="/cuenta/pedidos"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          Mis Pedidos
+                        </Link>
+                        {isAssociate && (
+                          <div className="px-4 py-2 border-t border-gray-200">
+                            <button
+                              onClick={toggleVatDisplay}
+                              className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 w-full text-left"
+                            >
+                              <Calculator className="h-4 w-4" />
+                              <span>Mostrar precios {showVatForAssociate ? 'sin' : 'con'} IVA</span>
+                            </button>
+                          </div>
+                        )}
+                        {isAdmin && (
+                          <Link
+                            href="/admin"
+                            className="block px-4 py-2 text-sm text-purple-600 hover:bg-purple-50 font-medium"
+                            onClick={() => setShowUserMenu(false)}
+                          >
+                            Panel Admin
+                          </Link>
+                        )}
+                        <button
+                          onClick={() => {
+                            setShowUserMenu(false)
+                            signOut({ callbackUrl: '/' })
+                          }}
+                          className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                        >
+                          Cerrar Sesión
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <Link
+                          href="/auth/login"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          Iniciar Sesión
+                        </Link>
+                        <Link
+                          href="/auth/registro"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          Crear Cuenta
+                        </Link>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Shopping Cart */}
               <Button 
                 variant="ghost" 
                 size="icon" 
                 className="text-gray-600 hover:text-bloom-primary transition-colors relative"
               >
-                <Heart className="h-5 w-5" />
-                {favoritesCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
-                    {favoritesCount > 99 ? '99+' : favoritesCount}
-                  </span>
-                )}
+                <ShoppingCart className="h-5 w-5" />
+                <span className="absolute -top-1 -right-1 bg-bloom-secondary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  0
+                </span>
               </Button>
-            </Link>
-
-            {/* User Account */}
-            <div className="relative user-menu-container">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-gray-600 hover:text-bloom-primary transition-colors"
-                onClick={() => setShowUserMenu(!showUserMenu)}
-              >
-                <User className="h-5 w-5" />
-              </Button>
-              
-              {/* User Dropdown Menu */}
-              {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border py-2 z-50">
-                  {isAuthenticated ? (
-                    <>
-                      <div className="px-4 py-2 border-b">
-                        <p className="text-sm font-medium text-gray-900">{user?.name || 'Usuario'}</p>
-                        <p className="text-xs text-gray-500">{user?.email}</p>
-                        {isAssociate && (
-                          <span className="inline-block mt-1 text-xs px-2 py-1 bg-bloom-secondary/10 text-bloom-secondary rounded-full">
-                            Asociado -{associateDiscount}%
-                          </span>
-                        )}
-                      </div>
-                      <Link
-                        href="/cuenta"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        Mi Cuenta
-                      </Link>
-                      <Link
-                        href="/cuenta/pedidos"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        Mis Pedidos
-                      </Link>
-                      {isAssociate && (
-                        <div className="px-4 py-2 border-t border-gray-200">
-                          <button
-                            onClick={toggleVatDisplay}
-                            className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 w-full text-left"
-                          >
-                            <Calculator className="h-4 w-4" />
-                            <span>Mostrar precios {showVatForAssociate ? 'sin' : 'con'} IVA</span>
-                          </button>
-                        </div>
-                      )}
-                      {isAdmin && (
-                        <Link
-                          href="/admin"
-                          className="block px-4 py-2 text-sm text-purple-600 hover:bg-purple-50 font-medium"
-                          onClick={() => setShowUserMenu(false)}
-                        >
-                          Panel Admin
-                        </Link>
-                      )}
-                      <button
-                        onClick={() => {
-                          setShowUserMenu(false)
-                          signOut({ callbackUrl: '/' })
-                        }}
-                        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                      >
-                        Cerrar Sesión
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <Link
-                        href="/auth/login"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        Iniciar Sesión
-                      </Link>
-                      <Link
-                        href="/auth/registro"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        Crear Cuenta
-                      </Link>
-                    </>
-                  )}
-                </div>
-              )}
             </div>
 
-            {/* Shopping Cart */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="text-gray-600 hover:text-bloom-primary transition-colors relative"
-            >
-              <ShoppingCart className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 bg-bloom-secondary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                0
-              </span>
-            </Button>
-
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu Button - Only Logo and Menu on Mobile */}
             <Button
               variant="ghost"
               size="icon"
@@ -438,26 +474,30 @@ export function Header() {
 
       {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="lg:hidden bg-white border-t">
+        <div className="lg:hidden bg-white border-t shadow-md">
           <div className="container py-4">
-            <nav className="space-y-4">
+            <nav className="space-y-1">
               {navigation.map((item) => (
                 <div key={item.name}>
                   <Link
                     href={item.href}
-                    className="flex items-center space-x-2 text-gray-700 hover:text-bloom-primary transition-colors font-medium py-2"
+                    className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors font-medium ${
+                      item.featured 
+                        ? 'text-bloom-primary bg-bloom-primary/5 hover:bg-bloom-primary/10' 
+                        : 'text-gray-700 hover:text-bloom-primary hover:bg-gray-50'
+                    }`}
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    {item.icon && <item.icon className="h-4 w-4" />}
+                    {item.icon && <item.icon className="h-5 w-5" />}
                     <span>{item.name}</span>
                   </Link>
                   {item.children && (
-                    <div className="ml-6 space-y-2">
+                    <div className="ml-8 mt-2 space-y-1">
                       {item.children.map((child) => (
                         <Link
                           key={child.name}
                           href={child.href}
-                          className="block text-sm text-gray-600 hover:text-bloom-primary transition-colors py-1"
+                          className="block text-sm text-gray-600 hover:text-bloom-primary transition-colors py-2 px-3 rounded-md hover:bg-gray-50"
                           onClick={() => setIsMenuOpen(false)}
                         >
                           {child.name}
@@ -471,6 +511,139 @@ export function Header() {
           </div>
         </div>
       )}
+
+      {/* Fixed Mobile Bottom Navigation */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
+        <div className="flex items-center justify-around py-2">
+          {/* Mi Cuenta */}
+          <div className="relative user-menu-container">
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-bloom-primary transition-colors min-w-0"
+            >
+              <User className="h-6 w-6 mb-1" />
+              <span className="text-xs font-medium">Cuenta</span>
+            </button>
+            
+            {/* User Dropdown Menu for Mobile */}
+            {showUserMenu && (
+              <div className="absolute bottom-full right-0 mb-2 w-64 bg-white rounded-lg shadow-lg border py-2 z-50">
+                {isAuthenticated ? (
+                  <>
+                    <div className="px-4 py-2 border-b">
+                      <p className="text-sm font-medium text-gray-900">{user?.name || 'Usuario'}</p>
+                      <p className="text-xs text-gray-500">{user?.email}</p>
+                      {isAssociate && (
+                        <span className="inline-block mt-1 text-xs px-2 py-1 bg-bloom-secondary/10 text-bloom-secondary rounded-full">
+                          Asociado -{associateDiscount}%
+                        </span>
+                      )}
+                    </div>
+                    <Link
+                      href="/cuenta"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      Mi Cuenta
+                    </Link>
+                    <Link
+                      href="/cuenta/pedidos"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      Mis Pedidos
+                    </Link>
+                    {isAssociate && (
+                      <div className="px-4 py-2 border-t border-gray-200">
+                        <button
+                          onClick={toggleVatDisplay}
+                          className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 w-full text-left"
+                        >
+                          <Calculator className="h-4 w-4" />
+                          <span>Mostrar precios {showVatForAssociate ? 'sin' : 'con'} IVA</span>
+                        </button>
+                      </div>
+                    )}
+                    {isAdmin && (
+                      <Link
+                        href="/admin"
+                        className="block px-4 py-2 text-sm text-purple-600 hover:bg-purple-50 font-medium"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        Panel Admin
+                      </Link>
+                    )}
+                    <button
+                      onClick={() => {
+                        setShowUserMenu(false)
+                        signOut({ callbackUrl: '/' })
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                    >
+                      Cerrar Sesión
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/auth/login"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      Iniciar Sesión
+                    </Link>
+                    <Link
+                      href="/auth/registro"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      Crear Cuenta
+                    </Link>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Favoritos */}
+          <Link
+            href="/cuenta/favoritos"
+            className="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-red-500 transition-colors min-w-0 relative"
+          >
+            <Heart className="h-6 w-6 mb-1" />
+            <span className="text-xs font-medium">Favoritos</span>
+            {favoritesCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                {favoritesCount > 99 ? '99+' : favoritesCount}
+              </span>
+            )}
+          </Link>
+
+          {/* Buscar - Destacado en el centro */}
+          <button className="flex flex-col items-center justify-center p-3 bg-bloom-primary text-white rounded-full shadow-lg hover:bg-bloom-primary/90 transition-all transform hover:scale-105 min-w-0">
+            <Search className="h-7 w-7" />
+          </button>
+
+          {/* Comparador */}
+          <button className="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-bloom-primary transition-colors min-w-0 relative">
+            <BarChart3 className="h-6 w-6 mb-1" />
+            <span className="text-xs font-medium">Comparar</span>
+            {/* Badge para items en comparador */}
+            <span className="absolute -top-1 -right-1 bg-bloom-secondary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium opacity-0">
+              0
+            </span>
+          </button>
+
+          {/* Carrito */}
+          <button className="flex flex-col items-center justify-center p-2 text-gray-600 hover:text-bloom-primary transition-colors min-w-0 relative">
+            <ShoppingCart className="h-6 w-6 mb-1" />
+            <span className="text-xs font-medium">Carrito</span>
+            <span className="absolute -top-1 -right-1 bg-bloom-secondary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+              0
+            </span>
+          </button>
+        </div>
+      </div>
     </header>
   )
 }

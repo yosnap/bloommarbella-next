@@ -21,32 +21,16 @@ export const ProductCard = memo(function ProductCard({
   showRibbons = true,
   className = '',
   priority = false,
-  pricingConfig
+  pricingConfig,
+  whatsappConfig
 }: ProductCardProps) {
   const { showVatForAssociate } = usePricing()
   const { toggleFavorite, isFavorite } = useFavorites()
   const isAssociate = userRole === 'ASSOCIATE'
   const [newBadgeDays, setNewBadgeDays] = useState(30)
-  const [whatsappConfig, setWhatsappConfig] = useState<WhatsAppConfig | null>(null)
   
   // Usar valor por defecto para badge "Nuevo" (30 días)
   // La configuración admin no debe ser accedida desde componentes públicos
-  
-  // Cargar configuración de WhatsApp
-  useEffect(() => {
-    const loadWhatsAppConfig = async () => {
-      try {
-        const response = await fetch('/api/whatsapp-config')
-        if (response.ok) {
-          const data = await response.json()
-          setWhatsappConfig(data.data)
-        }
-      } catch (error) {
-        console.error('Error loading WhatsApp config:', error)
-      }
-    }
-    loadWhatsAppConfig()
-  }, [])
   
   // Obtener precios calculados según el rol del usuario y preferencia de IVA
   const pricing = getDisplayPrice(product.basePrice, userRole, pricingConfig, showVatForAssociate)
