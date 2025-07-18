@@ -1,7 +1,7 @@
 'use client'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ReactNode, useState } from 'react'
+import { ReactNode, useState, useEffect } from 'react'
 
 // Configuración del QueryClient
 const queryClientConfig = {
@@ -36,13 +36,33 @@ export function ReactQueryProvider({ children }: { children: ReactNode }) {
 
 // Componente separado para devtools que solo se carga en desarrollo
 function DevTools() {
+  // No renderizar nada en producción
   if (process.env.NODE_ENV !== 'development') {
     return null
   }
 
-  // Importación dinámica para evitar errores en producción
-  const { ReactQueryDevtools } = require('@tanstack/react-query-devtools')
-  return <ReactQueryDevtools initialIsOpen={false} />
+  // En desarrollo, intentar cargar las devtools dinámicamente
+  const [DevtoolsComponent, setDevtoolsComponent] = useState<any>(null)
+
+  useEffect(() => {
+    // Solo intentar importar en el cliente y en desarrollo
+    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+      import('@tanstack/react-query-devtools')
+        .then(module => {
+          setDevtoolsComponent(() => module.ReactQueryDevtools)
+        })
+        .catch(() => {
+          // Silently fail si las devtools no están disponibles
+        })
+    }
+  }, [])
+
+  // No renderizar hasta que las devtools estén cargadas
+  if (!DevtoolsComponent) {
+    return null
+  }
+
+  return <DevtoolsComponent initialIsOpen={false} />
 }
 
 // Hook para keys de queries estandarizadas
