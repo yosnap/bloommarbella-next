@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { MongoClient } from 'mongodb'
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,24 +18,35 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
 
-    const logs = await prisma.syncLog.findMany({
-      orderBy: { createdAt: 'desc' },
-      skip: offset,
-      take: limit
-    })
+    // Usar MongoDB nativo para evitar P2031
+    const client = new MongoClient(process.env.DATABASE_URL!)
+    await client.connect()
+    const db = client.db()
 
-    const totalCount = await prisma.syncLog.count()
+    try {
+      const logs = await db.collection('sync_logs')
+        .find({})
+        .sort({ createdAt: -1 })
+        .skip(offset)
+        .limit(limit)
+        .toArray()
 
-    return NextResponse.json({
-      success: true,
-      logs,
-      pagination: {
-        total: totalCount,
-        limit,
-        offset,
-        hasMore: offset + limit < totalCount
-      }
-    })
+      const totalCount = await db.collection('sync_logs').countDocuments()
+
+      return NextResponse.json({
+        success: true,
+        logs,
+        pagination: {
+          total: totalCount,
+          limit,
+          offset,
+          hasMore: offset + limit < totalCount
+        }
+      })
+
+    } finally {
+      await client.close()
+    }
 
   } catch (error: any) {
     console.error('Error fetching sync logs:', error)
@@ -70,34 +81,40 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    let deletedCount
-    
-    if (olderThan === 0) {
-      // Eliminar todos los logs
-      deletedCount = await prisma.syncLog.deleteMany({})
-    } else {
-      // Eliminar logs más antiguos que X días
-      const cutoffDate = new Date()
-      cutoffDate.setDate(cutoffDate.getDate() - olderThan)
-      
-      deletedCount = await prisma.syncLog.deleteMany({
-        where: {
-          createdAt: {
-            lt: cutoffDate
-          }
-        }
-      })
-    }
+    // Usar MongoDB nativo para evitar P2031
+    const client = new MongoClient(process.env.DATABASE_URL!)
+    await client.connect()
+    const db = client.db()
 
-    const message = olderThan === 0 
-      ? `Se eliminaron ${deletedCount.count} registros (todos los logs)`
-      : `Se eliminaron ${deletedCount.count} registros de más de ${olderThan} días`
-    
-    return NextResponse.json({
-      success: true,
-      deletedCount: deletedCount.count,
-      message
-    })
+    try {
+      let deleteResult
+      
+      if (olderThan === 0) {
+        // Eliminar todos los logs
+        deleteResult = await db.collection('sync_logs').deleteMany({})
+      } else {
+        // Eliminar logs más antiguos que X días
+        const cutoffDate = new Date()
+        cutoffDate.setDate(cutoffDate.getDate() - olderThan)
+        
+        deleteResult = await db.collection('sync_logs').deleteMany({
+          createdAt: { $lt: cutoffDate }
+        })
+      }
+
+      const message = olderThan === 0 
+        ? `Se eliminaron ${deleteResult.deletedCount} registros (todos los logs)`
+        : `Se eliminaron ${deleteResult.deletedCount} registros de más de ${olderThan} días`
+      
+      return NextResponse.json({
+        success: true,
+        deletedCount: deleteResult.deletedCount,
+        message
+      })
+
+    } finally {
+      await client.close()
+    }
 
   } catch (error: any) {
     console.error('Error deleting sync logs:', error)

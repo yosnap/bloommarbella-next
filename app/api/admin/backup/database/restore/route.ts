@@ -17,26 +17,62 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     console.log('📁 FormData keys:', Array.from(formData.keys()))
     const file = formData.get('database') as File
-    console.log('📄 File info:', { name: file?.name, size: file?.size, type: file?.type })
+    console.log('📄 File info:', { 
+      name: file?.name, 
+      size: file?.size, 
+      type: file?.type,
+      hasFile: !!file 
+    })
     
     if (!file) {
       console.log('❌ No se encontró archivo en FormData')
-      return NextResponse.json({ error: 'No se proporcionó archivo' }, { status: 400 })
+      console.log('📋 FormData entries:')
+      for (const [key, value] of formData.entries()) {
+        console.log(`  ${key}: ${typeof value} - ${value instanceof File ? `File(${value.name})` : value}`)
+      }
+      return NextResponse.json({ 
+        error: 'No se proporcionó archivo',
+        debug: {
+          formDataKeys: Array.from(formData.keys()),
+          expectedKey: 'database'
+        }
+      }, { status: 400 })
     }
 
     // Leer y parsear el archivo
     const text = await file.text()
+    console.log('📄 File content length:', text.length)
+    console.log('📄 First 100 chars:', text.substring(0, 100))
+    
     let backup
     try {
       backup = JSON.parse(text)
+      console.log('✅ JSON parseado correctamente')
+      console.log('📊 Backup keys:', Object.keys(backup))
     } catch (parseError) {
-      console.error('Error parseando archivo JSON:', parseError)
-      return NextResponse.json({ error: 'Archivo JSON inválido' }, { status: 400 })
+      console.error('❌ Error parseando archivo JSON:', parseError)
+      console.log('📄 Archivo recibido (primeros 500 chars):', text.substring(0, 500))
+      return NextResponse.json({ 
+        error: 'Archivo JSON inválido',
+        details: parseError instanceof Error ? parseError.message : 'Error de parseo desconocido'
+      }, { status: 400 })
     }
 
     // Validar estructura del backup
+    console.log('🔍 Validando estructura del backup...')
+    console.log('📋 backup.version:', backup.version)
+    console.log('📋 backup.collections keys:', backup.collections ? Object.keys(backup.collections) : 'undefined')
+    
     if (!backup.version || !backup.collections) {
-      return NextResponse.json({ error: 'Formato de backup inválido' }, { status: 400 })
+      console.log('❌ Formato de backup inválido')
+      return NextResponse.json({ 
+        error: 'Formato de backup inválido',
+        details: {
+          hasVersion: !!backup.version,
+          hasCollections: !!backup.collections,
+          backupKeys: Object.keys(backup)
+        }
+      }, { status: 400 })
     }
 
     console.log(`📦 Backup detectado: v${backup.version} - ${backup.metadata?.totalRecords || 0} registros`)
