@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
     
     const { configType, value } = requestBody
 
-    if (!configType || !value) {
+    if (!configType || value === undefined || value === null) {
       console.log('❌ Faltan datos requeridos:', { configType, value })
       return NextResponse.json({ error: 'Tipo de configuración y valor son requeridos' }, { status: 400 })
     }
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'enabled debe ser boolean' }, { status: 400 })
       }
       
-      if (interval && !['hourly', 'daily', 'weekly', 'monthly', 'custom'].includes(interval)) {
+      if (interval && interval !== '' && !['hourly', 'daily', 'weekly', 'monthly', 'custom'].includes(interval)) {
         console.log('❌ interval no válido:', interval)
         return NextResponse.json({ error: 'interval no válido' }, { status: 400 })
       }

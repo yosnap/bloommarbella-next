@@ -15,9 +15,12 @@ export async function POST(request: NextRequest) {
 
     // Obtener el archivo del FormData
     const formData = await request.formData()
+    console.log('📁 FormData keys:', Array.from(formData.keys()))
     const file = formData.get('database') as File
+    console.log('📄 File info:', { name: file?.name, size: file?.size, type: file?.type })
     
     if (!file) {
+      console.log('❌ No se encontró archivo en FormData')
       return NextResponse.json({ error: 'No se proporcionó archivo' }, { status: 400 })
     }
 
