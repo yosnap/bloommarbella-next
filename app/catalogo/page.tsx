@@ -150,13 +150,23 @@ function CatalogContent() {
   // Actualizar rangos cuando lleguen los productos (solo en la primera carga)
   useEffect(() => {
     if (products.length > 0 && isInitialLoad && urlFiltersLoaded) {
-      // Solo actualizar si los rangos son diferentes a los valores por defecto y no se han cargado desde URL
-      setAdvancedFilters(prev => ({
-        ...prev,
-        priceRange: prev.priceRange[0] === 0 && prev.priceRange[1] === 500 ? [dynamicRanges.priceRange.min, dynamicRanges.priceRange.max] : prev.priceRange,
-        heightRange: prev.heightRange[0] === 0 && prev.heightRange[1] === 200 ? [dynamicRanges.heightRange.min, dynamicRanges.heightRange.max] : prev.heightRange,
-        widthRange: prev.widthRange[0] === 0 && prev.widthRange[1] === 100 ? [dynamicRanges.widthRange.min, dynamicRanges.widthRange.max] : prev.widthRange
-      }))
+      // Solo actualizar si los rangos son exactamente los valores por defecto hardcodeados
+      setAdvancedFilters(prev => {
+        const needsUpdate = prev.priceRange[0] === 0 && prev.priceRange[1] === 500 &&
+                           prev.heightRange[0] === 0 && prev.heightRange[1] === 200 &&
+                           prev.widthRange[0] === 0 && prev.widthRange[1] === 100
+                           
+        // Solo actualizar si todos los rangos están en valores por defecto
+        if (needsUpdate) {
+          return {
+            ...prev,
+            priceRange: [dynamicRanges.priceRange.min, dynamicRanges.priceRange.max],
+            heightRange: [dynamicRanges.heightRange.min, dynamicRanges.heightRange.max],
+            widthRange: [dynamicRanges.widthRange.min, dynamicRanges.widthRange.max]
+          }
+        }
+        return prev
+      })
       
       // Set isInitialLoad to false after a small delay to prevent the filter useEffect from triggering
       setTimeout(() => {
