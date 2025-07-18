@@ -52,7 +52,11 @@ export async function GET() {
       
       // Obtener estadísticas de colecciones
       const collections = await db.listCollections().toArray()
-      const collectionStats = {}
+      const collectionStats: Record<string, {
+        documents: number
+        name: string
+        error?: string
+      }> = {}
       
       for (const collection of collections) {
         try {
@@ -73,7 +77,12 @@ export async function GET() {
 
       // Información de la base de datos
       const admin = db.admin()
-      let dbInfo = {}
+      let dbInfo: {
+        version?: string
+        platform?: string
+        engine: string
+        error?: string
+      } = { engine: 'MongoDB' }
       try {
         const buildInfo = await admin.buildInfo()
         dbInfo = {
@@ -85,7 +94,7 @@ export async function GET() {
         dbInfo = {
           engine: 'MongoDB',
           version: 'No disponible',
-          error: err.message
+          error: err instanceof Error ? err.message : 'Error desconocido'
         }
       }
 
@@ -100,12 +109,16 @@ export async function GET() {
       console.error('Error obteniendo estadísticas de BD:', error)
       dbStats = {
         error: 'No se pudo conectar a la base de datos',
-        details: error.message
+        details: error instanceof Error ? error.message : 'Error desconocido'
       }
     }
 
     // Configuraciones principales del sistema
-    let systemConfig = {}
+    let systemConfig: Record<string, {
+      description: string
+      value: any
+      lastUpdated: Date
+    }> | { error: string } = {}
     try {
       const configs = await prisma.configuration.findMany({
         where: {
@@ -121,7 +134,7 @@ export async function GET() {
         }
       })
       
-      systemConfig = configs.reduce((acc, config) => {
+      systemConfig = configs.reduce((acc: Record<string, any>, config) => {
         acc[config.key] = {
           description: config.description,
           value: config.value,
@@ -135,7 +148,14 @@ export async function GET() {
     }
 
     // Logs recientes del sistema
-    let recentLogs = []
+    let recentLogs: Array<{
+      id: string
+      type: string
+      status: string
+      productsProcessed: number
+      errors: number
+      createdAt: Date
+    }> = []
     try {
       recentLogs = await prisma.syncLog.findMany({
         orderBy: { createdAt: 'desc' },
