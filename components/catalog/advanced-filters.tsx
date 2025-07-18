@@ -260,7 +260,7 @@ export const AdvancedFilters = memo(function AdvancedFilters({ filters, onFilter
                 min={priceRange.min}
                 max={priceRange.max}
                 step={5}
-                value={filters.priceRange}
+                value={filters.priceRange[0] === 0 && filters.priceRange[1] === 500 ? [priceRange.min, priceRange.max] : filters.priceRange}
                 onValueCommit={(value) => updateFilters({ priceRange: value })}
                 formatLabel={formatPrice}
                 label="Price"
@@ -274,7 +274,7 @@ export const AdvancedFilters = memo(function AdvancedFilters({ filters, onFilter
                 min={heightRange.min}
                 max={heightRange.max}
                 step={5}
-                value={filters.heightRange}
+                value={filters.heightRange[0] === 0 && filters.heightRange[1] === 200 ? [heightRange.min, heightRange.max] : filters.heightRange}
                 onValueCommit={(value) => updateFilters({ heightRange: value })}
                 formatLabel={formatDimension}
                 label="Height"
@@ -288,7 +288,7 @@ export const AdvancedFilters = memo(function AdvancedFilters({ filters, onFilter
                 min={widthRange.min}
                 max={widthRange.max}
                 step={2}
-                value={filters.widthRange}
+                value={filters.widthRange[0] === 0 && filters.widthRange[1] === 100 ? [widthRange.min, widthRange.max] : filters.widthRange}
                 onValueCommit={(value) => updateFilters({ widthRange: value })}
                 formatLabel={formatDimension}
                 label="Width"

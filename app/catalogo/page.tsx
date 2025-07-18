@@ -147,33 +147,15 @@ function CatalogContent() {
   // Estado para controlar si ya se cargaron los filtros desde URL
   const [urlFiltersLoaded, setUrlFiltersLoaded] = useState(false)
 
-  // Actualizar rangos cuando lleguen los productos (solo en la primera carga)
+  // NO actualizar rangos automáticamente - mantener solo los valores del usuario
   useEffect(() => {
     if (products.length > 0 && isInitialLoad && urlFiltersLoaded) {
-      // Solo actualizar si los rangos son exactamente los valores por defecto hardcodeados
-      setAdvancedFilters(prev => {
-        const needsUpdate = prev.priceRange[0] === 0 && prev.priceRange[1] === 500 &&
-                           prev.heightRange[0] === 0 && prev.heightRange[1] === 200 &&
-                           prev.widthRange[0] === 0 && prev.widthRange[1] === 100
-                           
-        // Solo actualizar si todos los rangos están en valores por defecto
-        if (needsUpdate) {
-          return {
-            ...prev,
-            priceRange: [dynamicRanges.priceRange.min, dynamicRanges.priceRange.max],
-            heightRange: [dynamicRanges.heightRange.min, dynamicRanges.heightRange.max],
-            widthRange: [dynamicRanges.widthRange.min, dynamicRanges.widthRange.max]
-          }
-        }
-        return prev
-      })
-      
-      // Set isInitialLoad to false after a small delay to prevent the filter useEffect from triggering
+      // Solo establecer isInitialLoad a false, no actualizar filtros
       setTimeout(() => {
         setIsInitialLoad(false)
       }, 100)
     }
-  }, [products, pricingConfig, isInitialLoad, urlFiltersLoaded, dynamicRanges])
+  }, [products, pricingConfig, isInitialLoad, urlFiltersLoaded])
 
   // Read URL parameters on page load - SOLO UNA VEZ
   useEffect(() => {
