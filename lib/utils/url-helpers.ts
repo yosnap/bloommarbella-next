@@ -133,17 +133,36 @@ export async function generateCatalogUrl(filters: {
   plantingSystem?: string[]
   colors?: string[]
   advancedCategories?: string[]
+  // Rangos dinámicos para comparación
+  dynamicRanges?: {
+    priceRange: { min: number; max: number }
+    heightRange: { min: number; max: number }
+    widthRange: { min: number; max: number }
+  }
 }): Promise<string> {
   const { 
     brands, categories, search, page, sortBy, sortOrder, itemsPerPage,
-    priceRange, heightRange, widthRange, inStock, location, plantingSystem, colors, advancedCategories
+    priceRange, heightRange, widthRange, inStock, location, plantingSystem, colors, advancedCategories,
+    dynamicRanges
   } = filters
 
   let baseUrl = '/catalogo'
   const params = new URLSearchParams()
 
-  // Verificar si hay filtros avanzados activos
-  const hasAdvancedFilters = priceRange || heightRange || widthRange || inStock || 
+  // Usar rangos dinámicos o valores por defecto si no se proporcionan
+  const defaultRanges = {
+    priceRange: { min: 0, max: 500 },
+    heightRange: { min: 0, max: 200 },
+    widthRange: { min: 0, max: 100 }
+  }
+  const ranges = dynamicRanges || defaultRanges
+
+  // Verificar si hay filtros avanzados activos comparando con rangos dinámicos
+  const isPriceFiltered = priceRange && (priceRange[0] > ranges.priceRange.min || priceRange[1] < ranges.priceRange.max)
+  const isHeightFiltered = heightRange && (heightRange[0] > ranges.heightRange.min || heightRange[1] < ranges.heightRange.max)
+  const isWidthFiltered = widthRange && (widthRange[0] > ranges.widthRange.min || widthRange[1] < ranges.widthRange.max)
+  
+  const hasAdvancedFilters = isPriceFiltered || isHeightFiltered || isWidthFiltered || inStock || 
     location?.length || plantingSystem?.length || colors?.length || advancedCategories?.length
 
   // Prioridad para URL amigable: search > brands > categories (solo para casos simples sin filtros avanzados)
@@ -172,18 +191,18 @@ export async function generateCatalogUrl(filters: {
       params.set('search', search.trim())
     }
     
-    // Filtros avanzados
-    if (priceRange && (priceRange[0] > 0 || priceRange[1] < 500)) {
+    // Filtros avanzados (solo agregar si están realmente filtrados)
+    if (isPriceFiltered) {
       params.set('price_min', priceRange[0].toString())
       params.set('price_max', priceRange[1].toString())
     }
     
-    if (heightRange && (heightRange[0] > 0 || heightRange[1] < 200)) {
+    if (isHeightFiltered) {
       params.set('height_min', heightRange[0].toString())
       params.set('height_max', heightRange[1].toString())
     }
     
-    if (widthRange && (widthRange[0] > 0 || widthRange[1] < 100)) {
+    if (isWidthFiltered) {
       params.set('width_min', widthRange[0].toString())
       params.set('width_max', widthRange[1].toString())
     }

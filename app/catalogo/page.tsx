@@ -83,8 +83,8 @@ function CatalogContent() {
   // Extraer datos de la respuesta
   const products = productsData?.data || []
   const pagination = productsData?.pagination || {
-    page: 1,
-    limit: 16,
+    page: currentPage, // Usar el estado actual en lugar de 1 por defecto
+    limit: itemsPerPage,
     total: 0,
     totalPages: 1,
     hasNextPage: false,
@@ -96,7 +96,44 @@ function CatalogContent() {
   const totalProducts = pagination.total
   const hasNextPage = pagination.hasNextPage
   const hasPrevPage = pagination.hasPrevPage
+  
+  // Debug logging
+  console.log('🔍 Pagination debug:', {
+    currentPage,
+    totalPages,
+    totalProducts,
+    hasNextPage,
+    hasPrevPage,
+    paginationFromAPI: productsData?.pagination,
+    isLoading: loading,
+    isFetching,
+    isPreviousData
+  })
   const hasOffersAvailable = products.some((product: Product) => (product as any).isOffer === true)
+
+  // Calcular rangos dinámicos basados en productos actuales
+  const dynamicRanges = useMemo(() => {
+    if (products.length === 0) {
+      return {
+        priceRange: { min: 0, max: 500 },
+        heightRange: { min: 0, max: 200 },
+        widthRange: { min: 0, max: 100 }
+      }
+    }
+    
+    const priceMin = Math.floor(Math.min(...products.map(p => p.basePrice * (pricingConfig?.priceMultiplier || 2.5))))
+    const priceMax = Math.ceil(Math.max(...products.map(p => p.basePrice * (pricingConfig?.priceMultiplier || 2.5))))
+    const heightMin = Math.floor(Math.min(...products.map(p => p.specifications?.height || 0)))
+    const heightMax = Math.ceil(Math.max(...products.map(p => p.specifications?.height || 200)))
+    const widthMin = Math.floor(Math.min(...products.map(p => p.specifications?.width || 0)))
+    const widthMax = Math.ceil(Math.max(...products.map(p => p.specifications?.width || 100)))
+    
+    return {
+      priceRange: { min: priceMin, max: priceMax },
+      heightRange: { min: heightMin, max: heightMax },
+      widthRange: { min: widthMin, max: widthMax }
+    }
+  }, [products, pricingConfig])
 
   // Estado para controlar si es la primera carga
   const [isInitialLoad, setIsInitialLoad] = useState(true)
@@ -107,19 +144,12 @@ function CatalogContent() {
   // Actualizar rangos cuando lleguen los productos (solo en la primera carga)
   useEffect(() => {
     if (products.length > 0 && isInitialLoad && urlFiltersLoaded) {
-      const priceMin = Math.floor(Math.min(...products.map(p => p.basePrice * (pricingConfig?.priceMultiplier || 2.5))))
-      const priceMax = Math.ceil(Math.max(...products.map(p => p.basePrice * (pricingConfig?.priceMultiplier || 2.5))))
-      const heightMin = Math.floor(Math.min(...products.map(p => p.specifications?.height || 0)))
-      const heightMax = Math.ceil(Math.max(...products.map(p => p.specifications?.height || 200)))
-      const widthMin = Math.floor(Math.min(...products.map(p => p.specifications?.width || 0)))
-      const widthMax = Math.ceil(Math.max(...products.map(p => p.specifications?.width || 100)))
-
-      // Solo actualizar si los rangos son diferentes a los valores por defecto
+      // Solo actualizar si los rangos son diferentes a los valores por defecto y no se han cargado desde URL
       setAdvancedFilters(prev => ({
         ...prev,
-        priceRange: prev.priceRange[0] === 0 && prev.priceRange[1] === 500 ? [priceMin, priceMax] : prev.priceRange,
-        heightRange: prev.heightRange[0] === 0 && prev.heightRange[1] === 200 ? [heightMin, heightMax] : prev.heightRange,
-        widthRange: prev.widthRange[0] === 0 && prev.widthRange[1] === 100 ? [widthMin, widthMax] : prev.widthRange
+        priceRange: prev.priceRange[0] === 0 && prev.priceRange[1] === 500 ? [dynamicRanges.priceRange.min, dynamicRanges.priceRange.max] : prev.priceRange,
+        heightRange: prev.heightRange[0] === 0 && prev.heightRange[1] === 200 ? [dynamicRanges.heightRange.min, dynamicRanges.heightRange.max] : prev.heightRange,
+        widthRange: prev.widthRange[0] === 0 && prev.widthRange[1] === 100 ? [dynamicRanges.widthRange.min, dynamicRanges.widthRange.max] : prev.widthRange
       }))
       
       // Set isInitialLoad to false after a small delay to prevent the filter useEffect from triggering
@@ -127,7 +157,7 @@ function CatalogContent() {
         setIsInitialLoad(false)
       }, 100)
     }
-  }, [products, pricingConfig, isInitialLoad, urlFiltersLoaded])
+  }, [products, pricingConfig, isInitialLoad, urlFiltersLoaded, dynamicRanges])
 
   // Read URL parameters on page load - SOLO UNA VEZ
   useEffect(() => {
@@ -175,13 +205,15 @@ function CatalogContent() {
           location: advancedFilters.location,
           plantingSystem: advancedFilters.plantingSystem,
           colors: advancedFilters.colors,
-          advancedCategories: advancedFilters.categories
+          advancedCategories: advancedFilters.categories,
+          // Rangos dinámicos para comparación
+          dynamicRanges
         })
         router.replace(url)
       }
       updateUrl()
     }
-  }, [selectedCategories, selectedBrands, searchTerm, currentPage, sortBy, sortOrder, itemsPerPage, advancedFilters, urlFiltersLoaded, isInitialLoad, router])
+  }, [selectedCategories, selectedBrands, searchTerm, currentPage, sortBy, sortOrder, itemsPerPage, advancedFilters, urlFiltersLoaded, isInitialLoad, router, dynamicRanges])
 
   // Prefetch next page for better UX
   useEffect(() => {
@@ -223,19 +255,11 @@ function CatalogContent() {
     setSortOrder('asc')
     setItemsPerPage(15)
     
-    // Calcular rangos dinámicos basados en productos actuales
-    const priceMin = products.length > 0 ? Math.floor(Math.min(...products.map(p => p.basePrice * (pricingConfig?.priceMultiplier || 2.5)))) : 0
-    const priceMax = products.length > 0 ? Math.ceil(Math.max(...products.map(p => p.basePrice * (pricingConfig?.priceMultiplier || 2.5)))) : 500
-    const heightMin = products.length > 0 ? Math.floor(Math.min(...products.map(p => p.specifications?.height || 0))) : 0
-    const heightMax = products.length > 0 ? Math.ceil(Math.max(...products.map(p => p.specifications?.height || 200))) : 200
-    const widthMin = products.length > 0 ? Math.floor(Math.min(...products.map(p => p.specifications?.width || 0))) : 0
-    const widthMax = products.length > 0 ? Math.ceil(Math.max(...products.map(p => p.specifications?.width || 100))) : 100
-    
     // Resetear filtros avanzados con rangos dinámicos
     setAdvancedFilters({
-      priceRange: [priceMin, priceMax],
-      heightRange: [heightMin, heightMax],
-      widthRange: [widthMin, widthMax],
+      priceRange: [dynamicRanges.priceRange.min, dynamicRanges.priceRange.max],
+      heightRange: [dynamicRanges.heightRange.min, dynamicRanges.heightRange.max],
+      widthRange: [dynamicRanges.widthRange.min, dynamicRanges.widthRange.max],
       inStock: false,
       location: [],
       plantingSystem: [],
@@ -245,7 +269,7 @@ function CatalogContent() {
     
     // Navegar a la URL base del catálogo
     router.push('/catalogo')
-  }, [router, products, pricingConfig])
+  }, [router, dynamicRanges])
 
   // Callbacks para eventos del UI
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -410,9 +434,10 @@ function CatalogContent() {
             {(selectedCategories.length > 0 || selectedBrands.length > 0 || searchTerm || 
               advancedFilters.categories.length > 0 || advancedFilters.location.length > 0 || 
               advancedFilters.colors.length > 0 || advancedFilters.plantingSystem.length > 0 || 
-              advancedFilters.inStock || advancedFilters.priceRange[0] > 0 || advancedFilters.priceRange[1] < 500 ||
-              advancedFilters.heightRange[0] > 0 || advancedFilters.heightRange[1] < 200 ||
-              advancedFilters.widthRange[0] > 0 || advancedFilters.widthRange[1] < 100) && (
+              advancedFilters.inStock || 
+              advancedFilters.priceRange[0] > dynamicRanges.priceRange.min || advancedFilters.priceRange[1] < dynamicRanges.priceRange.max ||
+              advancedFilters.heightRange[0] > dynamicRanges.heightRange.min || advancedFilters.heightRange[1] < dynamicRanges.heightRange.max ||
+              advancedFilters.widthRange[0] > dynamicRanges.widthRange.min || advancedFilters.widthRange[1] < dynamicRanges.widthRange.max) && (
               <div className="mb-4 p-4 bg-white rounded-lg shadow-sm border border-gray-200">
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                   <span className="text-gray-600 font-medium">Filtros activos:</span>
@@ -501,14 +526,12 @@ function CatalogContent() {
                     </span>
                   )}
                   
-                  {(advancedFilters.priceRange[0] > 0 || advancedFilters.priceRange[1] < 500) && (
+                  {(advancedFilters.priceRange[0] > dynamicRanges.priceRange.min || advancedFilters.priceRange[1] < dynamicRanges.priceRange.max) && (
                     <span className="inline-flex items-center gap-1 bg-amber-500 text-white px-2 py-1 rounded-full text-xs">
                       💰 €{advancedFilters.priceRange[0]} - €{advancedFilters.priceRange[1]}
                       <button
                         onClick={() => {
-                          const priceMin = products.length > 0 ? Math.floor(Math.min(...products.map(p => p.basePrice * (pricingConfig?.priceMultiplier || 2.5)))) : 0
-                          const priceMax = products.length > 0 ? Math.ceil(Math.max(...products.map(p => p.basePrice * (pricingConfig?.priceMultiplier || 2.5)))) : 500
-                          setAdvancedFilters(prev => ({ ...prev, priceRange: [priceMin, priceMax] }))
+                          setAdvancedFilters(prev => ({ ...prev, priceRange: [dynamicRanges.priceRange.min, dynamicRanges.priceRange.max] }))
                         }}
                         className="ml-1 hover:bg-white/20 rounded-full p-0.5 transition-colors"
                       >
@@ -517,14 +540,12 @@ function CatalogContent() {
                     </span>
                   )}
                   
-                  {(advancedFilters.heightRange[0] > 0 || advancedFilters.heightRange[1] < 200) && (
+                  {(advancedFilters.heightRange[0] > dynamicRanges.heightRange.min || advancedFilters.heightRange[1] < dynamicRanges.heightRange.max) && (
                     <span className="inline-flex items-center gap-1 bg-cyan-500 text-white px-2 py-1 rounded-full text-xs">
                       📏 {advancedFilters.heightRange[0]}cm - {advancedFilters.heightRange[1]}cm
                       <button
                         onClick={() => {
-                          const heightMin = products.length > 0 ? Math.floor(Math.min(...products.map(p => p.specifications?.height || 0))) : 0
-                          const heightMax = products.length > 0 ? Math.ceil(Math.max(...products.map(p => p.specifications?.height || 200))) : 200
-                          setAdvancedFilters(prev => ({ ...prev, heightRange: [heightMin, heightMax] }))
+                          setAdvancedFilters(prev => ({ ...prev, heightRange: [dynamicRanges.heightRange.min, dynamicRanges.heightRange.max] }))
                         }}
                         className="ml-1 hover:bg-white/20 rounded-full p-0.5 transition-colors"
                       >
@@ -533,14 +554,12 @@ function CatalogContent() {
                     </span>
                   )}
                   
-                  {(advancedFilters.widthRange[0] > 0 || advancedFilters.widthRange[1] < 100) && (
+                  {(advancedFilters.widthRange[0] > dynamicRanges.widthRange.min || advancedFilters.widthRange[1] < dynamicRanges.widthRange.max) && (
                     <span className="inline-flex items-center gap-1 bg-indigo-500 text-white px-2 py-1 rounded-full text-xs">
                       📐 {advancedFilters.widthRange[0]}cm - {advancedFilters.widthRange[1]}cm
                       <button
                         onClick={() => {
-                          const widthMin = products.length > 0 ? Math.floor(Math.min(...products.map(p => p.specifications?.width || 0))) : 0
-                          const widthMax = products.length > 0 ? Math.ceil(Math.max(...products.map(p => p.specifications?.width || 100))) : 100
-                          setAdvancedFilters(prev => ({ ...prev, widthRange: [widthMin, widthMax] }))
+                          setAdvancedFilters(prev => ({ ...prev, widthRange: [dynamicRanges.widthRange.min, dynamicRanges.widthRange.max] }))
                         }}
                         className="ml-1 hover:bg-white/20 rounded-full p-0.5 transition-colors"
                       >
