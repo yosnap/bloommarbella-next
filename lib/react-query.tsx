@@ -47,8 +47,10 @@ function DevTools() {
   useEffect(() => {
     // Solo intentar importar en el cliente y en desarrollo
     if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-      import('@tanstack/react-query-devtools')
-        .then(module => {
+      // Usar string para evitar que TypeScript trate de resolver el módulo en build time
+      const devtoolsModule = '@tanstack/react-query-devtools'
+      import(devtoolsModule)
+        .then((module: any) => {
           setDevtoolsComponent(() => module.ReactQueryDevtools)
         })
         .catch(() => {
