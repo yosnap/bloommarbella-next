@@ -457,6 +457,7 @@ export class HybridSync {
     newProducts: number
     updatedProducts: number
     errors: number
+    errorDetails?: Array<{sku: string, error: string}>
   }> {
     try {
       console.log('🔄 Sincronizando cambios desde Nieuwkoop...')
@@ -474,6 +475,7 @@ export class HybridSync {
       let newProducts = 0
       let updatedProducts = 0
       let errors = 0
+      const errorDetails: Array<{sku: string, error: string}> = []
 
       // Usar configuración de lotes personalizada o valores por defecto
       const batchSize = batchConfig?.batchSize || 500
@@ -618,8 +620,13 @@ export class HybridSync {
             newProducts++
           }
           } catch (error) {
-            console.error(`Error procesando producto ${nieuwkoopProduct.Itemcode}:`, error)
+            const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+            console.error(`Error procesando producto ${nieuwkoopProduct.Itemcode}:`, errorMessage)
             errors++
+            errorDetails.push({
+              sku: nieuwkoopProduct.Itemcode,
+              error: errorMessage
+            })
           }
         }
         
@@ -659,7 +666,19 @@ export class HybridSync {
 
       console.log(`✅ Sincronización completada: ${newProducts} nuevos, ${updatedProducts} actualizados, ${errors} errores`)
       
-      return { newProducts, updatedProducts, errors }
+      if (errors > 0) {
+        console.log(`📋 Primeros 10 errores:`)
+        errorDetails.slice(0, 10).forEach((err, i) => {
+          console.log(`  ${i+1}. SKU ${err.sku}: ${err.error}`)
+        })
+      }
+      
+      return { 
+        newProducts, 
+        updatedProducts, 
+        errors,
+        errorDetails: errorDetails.slice(0, 50) // Limitar a 50 errores para evitar logs muy grandes
+      }
     } catch (error) {
       console.error('❌ Error en sincronización:', error)
       throw error

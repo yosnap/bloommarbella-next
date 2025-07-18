@@ -60,7 +60,10 @@ export async function POST(request: NextRequest) {
         metadata: {
           newProducts: result.newProducts,
           updatedProducts: result.updatedProducts,
-          totalErrors: result.errors
+          totalErrors: result.errors,
+          errorDetails: result.errorDetails || [],
+          syncType: type,
+          completedAt: new Date().toISOString()
         },
         createdAt: new Date(),
         updatedAt: new Date()
