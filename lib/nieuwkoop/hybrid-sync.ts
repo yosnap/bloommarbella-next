@@ -1,6 +1,7 @@
 import { nieuwkoopRealClient } from './real-client'
 import { prisma } from '@/lib/prisma'
 import { translateCategory, translateSubcategory, translateMaterial, translateCountry } from '@/lib/translations'
+import { MongoClient } from 'mongodb'
 
 export class HybridSync {
   private priceCache = new Map<string, { price: number; stock: number; timestamp: number }>()
@@ -631,19 +632,30 @@ export class HybridSync {
         }
       }
 
-      // Actualizar timestamp de sincronización
-      await prisma.configuration.upsert({
-        where: { key: 'last_sync_date' },
-        update: { 
-          value: { timestamp: new Date().toISOString() },
-          updatedAt: new Date()
-        },
-        create: {
-          key: 'last_sync_date',
-          value: { timestamp: new Date().toISOString() },
-          description: 'Última sincronización de productos'
-        }
-      })
+      // Actualizar timestamp de sincronización usando MongoDB nativo para evitar P2031
+      const mongoClient = new MongoClient(process.env.DATABASE_URL!)
+      await mongoClient.connect()
+      const db = mongoClient.db()
+      
+      try {
+        await db.collection('configurations').updateOne(
+          { key: 'last_sync_date' },
+          {
+            $set: {
+              value: { timestamp: new Date().toISOString() },
+              description: 'Última sincronización de productos',
+              updatedAt: new Date()
+            },
+            $setOnInsert: {
+              key: 'last_sync_date',
+              createdAt: new Date()
+            }
+          },
+          { upsert: true }
+        )
+      } finally {
+        await mongoClient.close()
+      }
 
       console.log(`✅ Sincronización completada: ${newProducts} nuevos, ${updatedProducts} actualizados, ${errors} errores`)
       
