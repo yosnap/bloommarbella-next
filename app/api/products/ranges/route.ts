@@ -27,12 +27,27 @@ export async function GET() {
     const priceMultiplier = 2.5
     
     const prices = products.map(p => p.basePrice * priceMultiplier).filter(p => p > 0)
+    
+    // Safely extract height and width from specifications JsonValue
     const heights = products
-      .map(p => p.specifications?.height)
-      .filter(h => h !== null && h !== undefined && h > 0) as number[]
+      .map(p => {
+        if (p.specifications && typeof p.specifications === 'object' && 'height' in p.specifications) {
+          const height = p.specifications.height
+          return typeof height === 'number' ? height : null
+        }
+        return null
+      })
+      .filter(h => h !== null && h > 0) as number[]
+      
     const widths = products
-      .map(p => p.specifications?.width)
-      .filter(w => w !== null && w !== undefined && w > 0) as number[]
+      .map(p => {
+        if (p.specifications && typeof p.specifications === 'object' && 'width' in p.specifications) {
+          const width = p.specifications.width
+          return typeof width === 'number' ? width : null
+        }
+        return null
+      })
+      .filter(w => w !== null && w > 0) as number[]
 
     const ranges = {
       priceRange: {
