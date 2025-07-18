@@ -1,6 +1,7 @@
 'use client'
 
 import { X } from 'lucide-react'
+import { memo, useCallback } from 'react'
 
 interface ActiveFiltersProps {
   searchTerm: string
@@ -12,7 +13,7 @@ interface ActiveFiltersProps {
   onClearAll: () => void
 }
 
-export function ActiveFilters({
+export const ActiveFilters = memo(function ActiveFilters({
   searchTerm,
   selectedCategories,
   selectedBrands,
@@ -23,9 +24,9 @@ export function ActiveFilters({
 }: ActiveFiltersProps) {
   const hasActiveFilters = searchTerm || selectedCategories.length > 0 || selectedBrands.length > 0
 
-  const handleClearAll = () => {
+  const handleClearAll = useCallback(() => {
     onClearAll()
-  }
+  }, [onClearAll])
 
   if (!hasActiveFilters) return null
 
@@ -91,4 +92,4 @@ export function ActiveFilters({
       </div>
     </div>
   )
-}
+})

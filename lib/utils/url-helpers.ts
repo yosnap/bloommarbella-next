@@ -114,38 +114,52 @@ export async function translateCategoryForUrl(originalName: string): Promise<str
 }
 
 /**
- * Genera URLs del catálogo basadas en filtros
+ * Genera URLs del catálogo basadas en filtros, paginación y orden
  */
 export async function generateCatalogUrl(filters: {
   brands?: string[]
   categories?: string[]
   search?: string
+  page?: number
+  sortBy?: string
+  sortOrder?: string
+  itemsPerPage?: number
+  // Filtros avanzados
+  priceRange?: [number, number]
+  heightRange?: [number, number]
+  widthRange?: [number, number]
+  inStock?: boolean
+  location?: string[]
+  plantingSystem?: string[]
+  colors?: string[]
+  advancedCategories?: string[]
 }): Promise<string> {
-  const { brands, categories, search } = filters
+  const { 
+    brands, categories, search, page, sortBy, sortOrder, itemsPerPage,
+    priceRange, heightRange, widthRange, inStock, location, plantingSystem, colors, advancedCategories
+  } = filters
 
-  // Prioridad: search > brands > categories
-  if (search && search.trim()) {
+  let baseUrl = '/catalogo'
+  const params = new URLSearchParams()
+
+  // Verificar si hay filtros avanzados activos
+  const hasAdvancedFilters = priceRange || heightRange || widthRange || inStock || 
+    location?.length || plantingSystem?.length || colors?.length || advancedCategories?.length
+
+  // Prioridad para URL amigable: search > brands > categories (solo para casos simples sin filtros avanzados)
+  if (search && search.trim() && !brands?.length && !categories?.length && !hasAdvancedFilters) {
     const searchSlug = toUrlFriendly(search.trim())
-    return `/catalogo/search/${searchSlug}`
-  }
-
-  if (brands && brands.length === 1) {
+    baseUrl = `/catalogo/search/${searchSlug}`
+  } else if (brands && brands.length === 1 && !categories?.length && !search?.trim() && !hasAdvancedFilters) {
     const brandSlug = toUrlFriendly(brands[0])
-    return `/catalogo/marca/${brandSlug}`
-  }
-
-  if (categories && categories.length === 1) {
+    baseUrl = `/catalogo/marca/${brandSlug}`
+  } else if (categories && categories.length === 1 && !brands?.length && !search?.trim() && !hasAdvancedFilters) {
     // Para categorías, traducir primero y luego usar en la URL
     const translatedCategory = await translateCategoryForUrl(categories[0])
     const categorySlug = toUrlFriendly(translatedCategory)
-    return `/catalogo/categoria/${categorySlug}`
-  }
-
-  // Para múltiples filtros o casos complejos, usar query params
-  if ((brands && brands.length > 1) || (categories && categories.length > 1) || 
-      (brands && brands.length > 0 && categories && categories.length > 0)) {
-    const params = new URLSearchParams()
-    
+    baseUrl = `/catalogo/categoria/${categorySlug}`
+  } else {
+    // Para múltiples filtros o casos complejos, usar query params
     if (brands && brands.length > 0) {
       params.set('brands', brands.join(','))
     }
@@ -154,11 +168,67 @@ export async function generateCatalogUrl(filters: {
       params.set('categories', categories.join(','))
     }
     
-    return `/catalogo?${params.toString()}`
+    if (search && search.trim()) {
+      params.set('search', search.trim())
+    }
+    
+    // Filtros avanzados
+    if (priceRange && (priceRange[0] > 0 || priceRange[1] < 500)) {
+      params.set('price_min', priceRange[0].toString())
+      params.set('price_max', priceRange[1].toString())
+    }
+    
+    if (heightRange && (heightRange[0] > 0 || heightRange[1] < 200)) {
+      params.set('height_min', heightRange[0].toString())
+      params.set('height_max', heightRange[1].toString())
+    }
+    
+    if (widthRange && (widthRange[0] > 0 || widthRange[1] < 100)) {
+      params.set('width_min', widthRange[0].toString())
+      params.set('width_max', widthRange[1].toString())
+    }
+    
+    if (inStock) {
+      params.set('in_stock', 'true')
+    }
+    
+    if (location && location.length > 0) {
+      params.set('location', location.join(','))
+    }
+    
+    if (plantingSystem && plantingSystem.length > 0) {
+      params.set('planting_system', plantingSystem.join(','))
+    }
+    
+    if (colors && colors.length > 0) {
+      params.set('colors', colors.join(','))
+    }
+    
+    if (advancedCategories && advancedCategories.length > 0) {
+      params.set('advanced_categories', advancedCategories.join(','))
+    }
   }
 
-  // Sin filtros - catálogo base
-  return '/catalogo'
+  // Añadir parámetros de paginación y orden
+  if (page && page > 1) {
+    params.set('page', page.toString())
+  }
+  
+  if (sortBy && sortBy !== 'alphabetical') {
+    params.set('sort', sortBy)
+  }
+  
+  if (sortOrder && sortOrder !== 'asc' && sortBy && sortBy !== 'alphabetical') {
+    params.set('order', sortOrder)
+  }
+  
+  if (itemsPerPage && itemsPerPage !== 15) {
+    params.set('per_page', itemsPerPage.toString())
+  }
+
+  // Construir URL final
+  const queryString = params.toString()
+  return queryString ? `${baseUrl}?${queryString}` : baseUrl
 }
 
 /**
@@ -170,6 +240,19 @@ export async function navigateToCatalog(
     brands?: string[]
     categories?: string[]
     search?: string
+    page?: number
+    sortBy?: string
+    sortOrder?: string
+    itemsPerPage?: number
+    // Filtros avanzados
+    priceRange?: [number, number]
+    heightRange?: [number, number]
+    widthRange?: [number, number]
+    inStock?: boolean
+    location?: string[]
+    plantingSystem?: string[]
+    colors?: string[]
+    advancedCategories?: string[]
   }
 ) {
   const url = await generateCatalogUrl(filters)
@@ -177,32 +260,58 @@ export async function navigateToCatalog(
 }
 
 /**
- * Parsea los filtros desde la URL actual
+ * Parsea los filtros desde la URL actual incluyendo paginación y orden
  */
 export function parseFiltersFromUrl(pathname: string, searchParams: URLSearchParams): {
   brands: string[]
   categories: string[]
   search: string
+  page: number
+  sortBy: string
+  sortOrder: string
+  itemsPerPage: number
+  // Filtros avanzados
+  priceRange: [number, number]
+  heightRange: [number, number]
+  widthRange: [number, number]
+  inStock: boolean
+  location: string[]
+  plantingSystem: string[]
+  colors: string[]
+  advancedCategories: string[]
 } {
   const result = {
     brands: [] as string[],
     categories: [] as string[],
-    search: ''
+    search: '',
+    page: 1,
+    sortBy: 'alphabetical',
+    sortOrder: 'asc',
+    itemsPerPage: 15,
+    // Filtros avanzados
+    priceRange: [0, 500] as [number, number],
+    heightRange: [0, 200] as [number, number],
+    widthRange: [0, 100] as [number, number],
+    inStock: false,
+    location: [] as string[],
+    plantingSystem: [] as string[],
+    colors: [] as string[],
+    advancedCategories: [] as string[]
   }
 
   // Rutas dinámicas
   if (pathname.startsWith('/catalogo/marca/')) {
-    const brandSlug = pathname.split('/catalogo/marca/')[1]
+    const brandSlug = pathname.split('/catalogo/marca/')[1]?.split('?')[0]
     if (brandSlug) {
       result.brands = [fromUrlFriendly(brandSlug)]
     }
   } else if (pathname.startsWith('/catalogo/categoria/')) {
-    const categorySlug = pathname.split('/catalogo/categoria/')[1]
+    const categorySlug = pathname.split('/catalogo/categoria/')[1]?.split('?')[0]
     if (categorySlug) {
       result.categories = [fromUrlFriendly(categorySlug)]
     }
   } else if (pathname.startsWith('/catalogo/search/')) {
-    const searchSlug = pathname.split('/catalogo/search/')[1]
+    const searchSlug = pathname.split('/catalogo/search/')[1]?.split('?')[0]
     if (searchSlug) {
       result.search = decodeURIComponent(searchSlug).replace(/-/g, ' ')
     }
@@ -212,6 +321,23 @@ export function parseFiltersFromUrl(pathname: string, searchParams: URLSearchPar
   const brandsParam = searchParams.get('brands')
   const categoriesParam = searchParams.get('categories')
   const searchParam = searchParams.get('search')
+  const pageParam = searchParams.get('page')
+  const sortParam = searchParams.get('sort')
+  const orderParam = searchParams.get('order')
+  const perPageParam = searchParams.get('per_page')
+  
+  // Filtros avanzados
+  const priceMinParam = searchParams.get('price_min')
+  const priceMaxParam = searchParams.get('price_max')
+  const heightMinParam = searchParams.get('height_min')
+  const heightMaxParam = searchParams.get('height_max')
+  const widthMinParam = searchParams.get('width_min')
+  const widthMaxParam = searchParams.get('width_max')
+  const inStockParam = searchParams.get('in_stock')
+  const locationParam = searchParams.get('location')
+  const plantingSystemParam = searchParams.get('planting_system')
+  const colorsParam = searchParams.get('colors')
+  const advancedCategoriesParam = searchParams.get('advanced_categories')
 
   if (brandsParam) {
     result.brands = brandsParam.split(',').map(b => b.trim()).filter(b => b)
@@ -223,6 +349,73 @@ export function parseFiltersFromUrl(pathname: string, searchParams: URLSearchPar
 
   if (searchParam) {
     result.search = searchParam
+  }
+
+  if (pageParam) {
+    const page = parseInt(pageParam)
+    if (!isNaN(page) && page > 0) {
+      result.page = page
+    }
+  }
+
+  if (sortParam) {
+    result.sortBy = sortParam
+  }
+
+  if (orderParam) {
+    result.sortOrder = orderParam
+  }
+
+  if (perPageParam) {
+    const perPage = parseInt(perPageParam)
+    if (!isNaN(perPage) && perPage > 0) {
+      result.itemsPerPage = perPage
+    }
+  }
+
+  // Procesar filtros avanzados
+  if (priceMinParam || priceMaxParam) {
+    const priceMin = priceMinParam ? parseInt(priceMinParam) : 0
+    const priceMax = priceMaxParam ? parseInt(priceMaxParam) : 500
+    if (!isNaN(priceMin) && !isNaN(priceMax)) {
+      result.priceRange = [priceMin, priceMax]
+    }
+  }
+
+  if (heightMinParam || heightMaxParam) {
+    const heightMin = heightMinParam ? parseInt(heightMinParam) : 0
+    const heightMax = heightMaxParam ? parseInt(heightMaxParam) : 200
+    if (!isNaN(heightMin) && !isNaN(heightMax)) {
+      result.heightRange = [heightMin, heightMax]
+    }
+  }
+
+  if (widthMinParam || widthMaxParam) {
+    const widthMin = widthMinParam ? parseInt(widthMinParam) : 0
+    const widthMax = widthMaxParam ? parseInt(widthMaxParam) : 100
+    if (!isNaN(widthMin) && !isNaN(widthMax)) {
+      result.widthRange = [widthMin, widthMax]
+    }
+  }
+
+  if (inStockParam) {
+    result.inStock = inStockParam === 'true'
+  }
+
+  if (locationParam) {
+    result.location = locationParam.split(',').map(l => l.trim()).filter(l => l)
+  }
+
+  if (plantingSystemParam) {
+    result.plantingSystem = plantingSystemParam.split(',').map(p => p.trim()).filter(p => p)
+  }
+
+  if (colorsParam) {
+    result.colors = colorsParam.split(',').map(c => c.trim()).filter(c => c)
+  }
+
+  if (advancedCategoriesParam) {
+    result.advancedCategories = advancedCategoriesParam.split(',').map(c => c.trim()).filter(c => c)
   }
 
   return result

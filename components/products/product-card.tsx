@@ -6,11 +6,11 @@ import { Product, ProductCardProps } from '@/types/product'
 import { getDisplayPrice, formatPrice } from '@/lib/pricing'
 import { usePricing } from '@/contexts/pricing-context'
 import { useFavorites } from '@/contexts/favorites-context'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo, useCallback } from 'react'
 import { isNewProduct } from '@/lib/utils/badge-utils'
 import { createWhatsAppLink, WhatsAppConfig } from '@/lib/whatsapp'
 
-export function ProductCard({ 
+export const ProductCard = memo(function ProductCard({ 
   product, 
   userRole, 
   viewMode = 'grid',
@@ -279,6 +279,6 @@ export function ProductCard({
       </div>
     </div>
   )
-}
+})
 
 export default ProductCard

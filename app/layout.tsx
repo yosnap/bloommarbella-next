@@ -8,6 +8,7 @@ import { PricingProvider } from '@/contexts/pricing-context'
 import { ToastProvider } from '@/contexts/toast-context'
 import { FavoritesProvider } from '@/contexts/favorites-context'
 import { ToastContainer } from '@/components/ui/toast'
+import { ReactQueryProvider } from '@/lib/react-query'
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -48,16 +49,18 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <NextAuthProvider>
-          <AuthProvider>
-            <PricingProvider>
-              <ToastProvider>
-                <FavoritesProvider>
-                  {children}
-                  <ToastContainer />
-                </FavoritesProvider>
-              </ToastProvider>
-            </PricingProvider>
-          </AuthProvider>
+          <ReactQueryProvider>
+            <AuthProvider>
+              <PricingProvider>
+                <ToastProvider>
+                  <FavoritesProvider>
+                    {children}
+                    <ToastContainer />
+                  </FavoritesProvider>
+                </ToastProvider>
+              </PricingProvider>
+            </AuthProvider>
+          </ReactQueryProvider>
         </NextAuthProvider>
       </body>
     </html>

@@ -5,6 +5,85 @@ Todos los cambios notables en este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2025-01-18
+
+### 🎯 Mejoras Completas del Catálogo y Experiencia de Usuario
+
+#### ⚡ Optimizaciones de Rendimiento
+- ✅ **React Query v5**: Implementación completa con integración de cache del admin
+- ✅ **Cache diferenciado**: Configuración específica por tipo de datos
+  - Precios: 2 minutos (críticos)
+  - Categorías: 10 minutos (estables)
+  - Catálogo general: 30 minutos (configurable)
+- ✅ **Skeleton loading**: Carga visual completa durante obtención de datos
+- ✅ **Página estática**: Solo recarga la lista de productos, mantiene UI intacta
+
+#### 🔧 Correcciones Críticas de Paginación
+- ✅ **Fix límite hardcodeado**: Eliminado límite de 20 productos por página
+- ✅ **Fix cálculo de total**: Corrección en count real de productos (18,317 productos)
+- ✅ **Paginación funcional**: 1,145 páginas correctas con navegación completa
+- ✅ **Productos por página**: Cambiado por defecto de 16 a 15 productos
+
+#### 🎨 Mejoras de Interfaz de Usuario
+- ✅ **Filtros activos mejorados**: Visualización completa con códigos de color
+- ✅ **Eliminación individual**: Botón × en cada filtro para eliminación selectiva
+- ✅ **Botón admin**: Visible en header para usuarios administradores
+- ✅ **Sidebar limpio**: Eliminado botón "Clear All" innecesario
+
+#### 🔗 URLs Amigables Completas
+- ✅ **Filtros básicos**: URLs semánticas (`/catalogo/marca/lechuza`)
+- ✅ **Filtros avanzados**: Query parameters completos en URL
+- ✅ **Sincronización bidireccional**: Estado ↔ URL en tiempo real
+- ✅ **Navegación del navegador**: Botones atrás/adelante funcionan correctamente
+- ✅ **URLs compartibles**: Marcadores y enlaces mantienen estado completo
+
+#### 🎛️ Sliders y Filtros Avanzados
+- ✅ **Inputs numéricos**: Campos editables en sliders de precio/medidas
+- ✅ **Filtrado al soltar**: Consultas solo cuando se termina de deslizar
+- ✅ **Optimización móvil**: Soporte completo para dispositivos táctiles
+- ✅ **Validación inteligente**: Valores mantenidos dentro de rangos
+
+#### 🏢 Panel de Administración Mejorado
+- ✅ **Cache configurable**: Nuevos campos para cache específico por tipo
+- ✅ **Tiempos diferenciados**: Configuración independiente para precios y categorías
+- ✅ **Interfaz mejorada**: Controles organizados en grid de 3 columnas
+
+#### 🔄 Parámetros de URL Implementados
+```typescript
+// Filtros básicos
+?brands=marca1,marca2
+?categories=cat1,cat2
+?search=término
+
+// Filtros avanzados  
+?price_min=50&price_max=200
+?height_min=10&height_max=50
+?in_stock=true&location=indoor
+?colors=black,white&planting_system=soil
+
+// Paginación y orden
+?page=2&sort=price&order=desc&per_page=15
+```
+
+#### 🛠️ Mejoras Técnicas
+- ✅ **Hooks optimizados**: `useProductsQuery` con cache inteligente
+- ✅ **Prefetching**: Precarga automática de siguiente página
+- ✅ **Placeholder data**: Transiciones suaves entre filtros
+- ✅ **TypeScript**: Tipado completo de URLs y filtros
+- ✅ **Memoización**: Prevención de re-renders innecesarios
+
+#### 📊 Estadísticas del Catálogo
+- **Total productos activos**: 18,317
+- **Páginas totales**: 1,145 (con 15 productos por página)
+- **Filtros disponibles**: 8 tipos diferentes con eliminación individual
+- **URLs amigables**: Soporte completo para SEO y compartir
+
+### 🐛 Correcciones
+- ✅ **Fix hooks order**: Corrección de orden de React hooks
+- ✅ **Fix skeleton infinito**: Resolución de bucle de carga
+- ✅ **Fix filtros invisibles**: Filtros activos ahora visibles correctamente
+- ✅ **Fix cache config**: Integración completa con configuración del admin
+
 ## [1.0.1] - 2025-01-17
 
 ### 🔧 Correcciones Críticas y Mejoras de Estabilidad

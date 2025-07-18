@@ -14,6 +14,8 @@ interface Configuration {
   maxStockAlert: number
   enableCache: boolean
   cacheTime: number
+  pricesCacheTime: number
+  categoriesCacheTime: number
   newBadgeDays: number
   whatsappEnabled: boolean
   whatsappNumber: string
@@ -32,6 +34,8 @@ export default function ConfigurationPage() {
     maxStockAlert: 100,
     enableCache: true,
     cacheTime: 30,
+    pricesCacheTime: 2,
+    categoriesCacheTime: 10,
     newBadgeDays: 30,
     whatsappEnabled: true,
     whatsappNumber: '34952123456',
@@ -226,7 +230,7 @@ export default function ConfigurationPage() {
                 <h2 className="text-lg font-semibold text-gray-900">Configuración de Cache</h2>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-6">
                 <div>
                   <label className="flex items-center gap-2">
                     <input
@@ -244,19 +248,60 @@ export default function ConfigurationPage() {
                   </p>
                 </div>
                 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tiempo de Cache (minutos)
-                  </label>
-                  <input
-                    type="number"
-                    min="5"
-                    max="120"
-                    value={config.cacheTime}
-                    onChange={(e) => handleInputChange('cacheTime', parseInt(e.target.value))}
-                    disabled={!config.enableCache}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#183a1d] disabled:bg-gray-100"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Cache General (minutos)
+                    </label>
+                    <input
+                      type="number"
+                      min="5"
+                      max="120"
+                      value={config.cacheTime}
+                      onChange={(e) => handleInputChange('cacheTime', parseInt(e.target.value))}
+                      disabled={!config.enableCache}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#183a1d] disabled:bg-gray-100"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Catálogo y datos estables
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Cache Precios (minutos)
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="60"
+                      value={config.pricesCacheTime}
+                      onChange={(e) => handleInputChange('pricesCacheTime', parseInt(e.target.value))}
+                      disabled={!config.enableCache}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#183a1d] disabled:bg-gray-100"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Datos de precios críticos
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Cache Categorías (minutos)
+                    </label>
+                    <input
+                      type="number"
+                      min="5"
+                      max="60"
+                      value={config.categoriesCacheTime}
+                      onChange={(e) => handleInputChange('categoriesCacheTime', parseInt(e.target.value))}
+                      disabled={!config.enableCache}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#183a1d] disabled:bg-gray-100"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Categorías y filtros
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

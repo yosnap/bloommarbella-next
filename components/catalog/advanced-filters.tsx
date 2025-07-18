@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo, useCallback } from 'react'
 import { ChevronDown, ChevronRight, Cloud, Sun, Filter } from 'lucide-react'
 import { RangeSlider } from '@/components/ui/range-slider'
 import { useCategoryTranslations } from '@/hooks/use-translations'
@@ -55,7 +55,7 @@ const plantingSystemOptions = [
   { value: 'artificial', label: 'Artificial glued', icon: '🎨' }
 ]
 
-export function AdvancedFilters({ filters, onFiltersChange, products }: AdvancedFiltersProps) {
+export const AdvancedFilters = memo(function AdvancedFilters({ filters, onFiltersChange, products }: AdvancedFiltersProps) {
   const [expandedSections, setExpandedSections] = useState<string[]>(['dimensions'])
   const [categories, setCategories] = useState<CategoryData[]>([])
   const [expandedCategories, setExpandedCategories] = useState<string[]>([])
@@ -183,19 +183,19 @@ export function AdvancedFilters({ filters, onFiltersChange, products }: Advanced
     })
   }, [filters, priceRange.min, priceRange.max, heightRange.min, heightRange.max, widthRange.min, widthRange.max])
 
-  const toggleSection = (section: string) => {
+  const toggleSection = useCallback((section: string) => {
     setExpandedSections(prev => 
       prev.includes(section) 
         ? prev.filter(s => s !== section)
         : [...prev, section]
     )
-  }
+  }, [])
 
-  const updateFilters = (updates: Partial<FilterState>) => {
+  const updateFilters = useCallback((updates: Partial<FilterState>) => {
     onFiltersChange({ ...filters, ...updates })
-  }
+  }, [filters, onFiltersChange])
 
-  const handleClearAll = () => {
+  const handleClearAll = useCallback(() => {
     onFiltersChange({
       priceRange: [priceRange.min, priceRange.max],
       heightRange: [heightRange.min, heightRange.max],
@@ -206,7 +206,7 @@ export function AdvancedFilters({ filters, onFiltersChange, products }: Advanced
       colors: [],
       categories: []
     })
-  }
+  }, [priceRange, heightRange, widthRange, onFiltersChange])
 
   const formatPrice = (value: number) => `€${value}`
   const formatDimension = (value: number) => `${value}cm`
@@ -236,12 +236,6 @@ export function AdvancedFilters({ filters, onFiltersChange, products }: Advanced
       <div className="flex items-center gap-2 mb-6">
         <Filter className="h-5 w-5 text-[#183a1d]" />
         <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
-        <button 
-          onClick={handleClearAll}
-          className="ml-auto text-sm text-[#f0a04b] hover:text-[#e69440] font-medium"
-        >
-          Clear all
-        </button>
       </div>
 
       {/* Dimensions (Price, Height, Width) */}
@@ -262,46 +256,43 @@ export function AdvancedFilters({ filters, onFiltersChange, products }: Advanced
           <div className="px-4 pb-4 space-y-6">
             {/* Price Range */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Price
-              </label>
               <RangeSlider
                 min={priceRange.min}
                 max={priceRange.max}
                 step={5}
                 value={filters.priceRange}
-                onValueChange={(value) => updateFilters({ priceRange: value })}
+                onValueCommit={(value) => updateFilters({ priceRange: value })}
                 formatLabel={formatPrice}
+                label="Price"
+                showInputs={true}
               />
             </div>
             
             {/* Height Range */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Height
-              </label>
               <RangeSlider
                 min={heightRange.min}
                 max={heightRange.max}
                 step={5}
                 value={filters.heightRange}
-                onValueChange={(value) => updateFilters({ heightRange: value })}
+                onValueCommit={(value) => updateFilters({ heightRange: value })}
                 formatLabel={formatDimension}
+                label="Height"
+                showInputs={true}
               />
             </div>
             
             {/* Width Range */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Width
-              </label>
               <RangeSlider
                 min={widthRange.min}
                 max={widthRange.max}
                 step={2}
                 value={filters.widthRange}
-                onValueChange={(value) => updateFilters({ widthRange: value })}
+                onValueCommit={(value) => updateFilters({ widthRange: value })}
                 formatLabel={formatDimension}
+                label="Width"
+                showInputs={true}
               />
             </div>
           </div>
@@ -611,4 +602,4 @@ export function AdvancedFilters({ filters, onFiltersChange, products }: Advanced
       </div>
     </div>
   )
-}
+})

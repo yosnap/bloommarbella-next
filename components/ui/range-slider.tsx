@@ -10,15 +10,19 @@ interface RangeSliderProps extends React.ComponentPropsWithoutRef<typeof SliderP
   step?: number
   value?: [number, number]
   onValueChange?: (value: [number, number]) => void
+  onValueCommit?: (value: [number, number]) => void
   formatLabel?: (value: number) => string
   showLabels?: boolean
+  showInputs?: boolean
+  label?: string
 }
 
 const RangeSlider = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
   RangeSliderProps
->(({ className, min = 0, max = 100, step = 1, value, onValueChange, formatLabel = (v) => v.toString(), showLabels = true, ...props }, ref) => {
+>(({ className, min = 0, max = 100, step = 1, value, onValueChange, onValueCommit, formatLabel = (v) => v.toString(), showLabels = true, showInputs = true, label, ...props }, ref) => {
   const [localValue, setLocalValue] = React.useState<[number, number]>(value || [min, max])
+  const [isSliding, setIsSliding] = React.useState(false)
 
   React.useEffect(() => {
     if (value) {
@@ -29,11 +33,65 @@ const RangeSlider = React.forwardRef<
   const handleValueChange = (newValue: number[]) => {
     const rangeValue: [number, number] = [newValue[0], newValue[1]]
     setLocalValue(rangeValue)
-    onValueChange?.(rangeValue)
+    // Solo disparar onValueChange durante el deslizamiento si se proporciona
+    if (onValueChange && isSliding) {
+      onValueChange(rangeValue)
+    }
+  }
+
+  const handleValueCommit = (newValue: number[]) => {
+    const rangeValue: [number, number] = [newValue[0], newValue[1]]
+    setLocalValue(rangeValue)
+    setIsSliding(false)
+    // Disparar el commit cuando se suelta
+    onValueCommit?.(rangeValue)
+  }
+
+  const handlePointerDown = () => {
+    setIsSliding(true)
+  }
+
+  const handleInputChange = (index: 0 | 1, inputValue: string) => {
+    const numValue = parseInt(inputValue) || (index === 0 ? min : max)
+    const clampedValue = Math.max(min, Math.min(max, numValue))
+    const newValue: [number, number] = index === 0 
+      ? [clampedValue, Math.max(clampedValue, localValue[1])]
+      : [Math.min(clampedValue, localValue[0]), clampedValue]
+    
+    setLocalValue(newValue)
+    onValueCommit?.(newValue)
   }
 
   return (
     <div className="space-y-3">
+      {label && (
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-medium text-gray-700">{label}</label>
+        </div>
+      )}
+      
+      {showInputs && (
+        <div className="flex items-center gap-2 mb-3">
+          <input
+            type="number"
+            value={localValue[0]}
+            onChange={(e) => handleInputChange(0, e.target.value)}
+            min={min}
+            max={max}
+            className="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-[#183a1d] focus:border-[#183a1d]"
+          />
+          <span className="text-xs text-gray-500">-</span>
+          <input
+            type="number"
+            value={localValue[1]}
+            onChange={(e) => handleInputChange(1, e.target.value)}
+            min={min}
+            max={max}
+            className="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-[#183a1d] focus:border-[#183a1d]"
+          />
+        </div>
+      )}
+      
       <SliderPrimitive.Root
         ref={ref}
         className={cn(
@@ -42,6 +100,8 @@ const RangeSlider = React.forwardRef<
         )}
         value={localValue}
         onValueChange={handleValueChange}
+        onValueCommit={handleValueCommit}
+        onPointerDown={handlePointerDown}
         max={max}
         min={min}
         step={step}

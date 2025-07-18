@@ -222,13 +222,17 @@ export function Header() {
             >
               Área Asociados
             </Link>
-            {/* <span>|</span>
-            <Link 
-              href="/admin" 
-              className="text-white hover:text-bloom-secondary transition-colors"
-            >
-              Admin
-            </Link> */}
+            {isAdmin && (
+              <>
+                <span>|</span>
+                <Link 
+                  href="/admin" 
+                  className="text-white hover:text-bloom-secondary transition-colors"
+                >
+                  Admin
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -366,7 +370,7 @@ export function Header() {
                           </button>
                         </div>
                       )}
-                      {/* {isAdmin && (
+                      {isAdmin && (
                         <Link
                           href="/admin"
                           className="block px-4 py-2 text-sm text-purple-600 hover:bg-purple-50 font-medium"
@@ -374,7 +378,7 @@ export function Header() {
                         >
                           Panel Admin
                         </Link>
-                      )} */}
+                      )}
                       <button
                         onClick={() => {
                           setShowUserMenu(false)

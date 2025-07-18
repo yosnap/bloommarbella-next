@@ -263,8 +263,8 @@ export class HybridSync {
       (heightMin !== undefined || heightMax !== undefined) ||
       (widthMin !== undefined || widthMax !== undefined)
     
-    // Limitar a máximo 20 productos por página para evitar loops infinitos
-    const maxPerPage = 20
+    // Limitar a máximo 100 productos por página para evitar loops infinitos
+    const maxPerPage = 100
     const actualLimit = Math.min(limit, maxPerPage)
     
     let products: any[]
@@ -432,8 +432,15 @@ export class HybridSync {
       })
     }
 
-    // 5. Aplicar paginación después de todos los filtros en memoria
-    const totalCount = finalProducts.length
+    // 5. Calcular total real para paginación correcta
+    let totalCount = finalProducts.length
+    
+    // Si no hay filtros avanzados ni de marcas, obtener el total real de la BD
+    if (!brands?.length && !hasAdvancedFilters) {
+      totalCount = await prisma.product.count({ where })
+    }
+    
+    // 6. Aplicar paginación después de todos los filtros en memoria
     const skip = (page - 1) * actualLimit
     const paginatedProducts = finalProducts.slice(skip, skip + actualLimit)
     

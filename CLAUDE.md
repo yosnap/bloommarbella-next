@@ -6,6 +6,29 @@ Bloom Marbella es una plataforma e-commerce desarrollada con Next.js 15 que cons
 
 ## Estado Actual del Proyecto
 
+### 🎯 Versión 1.0.2 - Catálogo y UX Completamente Optimizados
+
+#### ⚡ Optimizaciones de Rendimiento Avanzadas
+- **React Query v5**: Sistema de cache inteligente con configuración del admin
+- **Cache diferenciado**: Tiempos específicos por tipo de datos (precios 2min, categorías 10min)
+- **Skeleton loading**: Carga visual completa durante obtención de datos
+- **Paginación corregida**: 18,317 productos en 1,145 páginas funcionales
+- **Filtrado optimizado**: Queries solo al soltar sliders, no durante deslizamiento
+
+#### 🔗 URLs Amigables Completas
+- **URLs semánticas**: `/catalogo/marca/lechuza`, `/catalogo/categoria/plantas`
+- **Query parameters completos**: Todos los filtros reflejados en URL
+- **Sincronización bidireccional**: Estado ↔ URL en tiempo real
+- **Navegación del navegador**: Botones atrás/adelante totalmente funcionales
+- **URLs compartibles**: Marcadores y enlaces mantienen estado completo
+
+#### 🎨 Interfaz de Usuario Mejorada
+- **Filtros activos visibles**: Códigos de color y eliminación individual
+- **Sliders con inputs**: Campos numéricos editables en precio/medidas
+- **Botón admin**: Visible en header para administradores
+- **Sidebar optimizado**: Eliminado botón "Clear All" innecesario
+- **Productos por página**: Cambiado por defecto a 15 productos
+
 ### ✅ Funcionalidades Completadas
 
 #### Sistema de Autenticación y Usuarios

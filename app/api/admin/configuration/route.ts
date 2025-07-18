@@ -28,6 +28,8 @@ export async function GET() {
             'max_stock_alert',
             'enable_cache',
             'cache_time',
+            'prices_cache_time',
+            'categories_cache_time',
             'new_badge_days',
             'whatsapp_enabled',
             'whatsapp_number',
@@ -47,6 +49,8 @@ export async function GET() {
       maxStockAlert: 100,
       enableCache: true,
       cacheTime: 30,
+      pricesCacheTime: 2,
+      categoriesCacheTime: 10,
       newBadgeDays: 30,
       whatsappEnabled: true,
       whatsappNumber: '34952123456',
@@ -76,6 +80,12 @@ export async function GET() {
           break
         case 'cache_time':
           config.cacheTime = parseInt(item.value?.toString() || '30') || 30
+          break
+        case 'prices_cache_time':
+          config.pricesCacheTime = parseInt(item.value?.toString() || '2') || 2
+          break
+        case 'categories_cache_time':
+          config.categoriesCacheTime = parseInt(item.value?.toString() || '10') || 10
           break
         case 'new_badge_days':
           config.newBadgeDays = parseInt(item.value?.toString() || '30') || 30
@@ -132,6 +142,8 @@ export async function POST(request: NextRequest) {
       maxStockAlert,
       enableCache,
       cacheTime,
+      pricesCacheTime,
+      categoriesCacheTime,
       newBadgeDays,
       whatsappEnabled,
       whatsappNumber,
@@ -166,6 +178,8 @@ export async function POST(request: NextRequest) {
       { key: 'max_stock_alert', value: maxStockAlert.toString() },
       { key: 'enable_cache', value: enableCache.toString() },
       { key: 'cache_time', value: cacheTime.toString() },
+      { key: 'prices_cache_time', value: pricesCacheTime.toString() },
+      { key: 'categories_cache_time', value: categoriesCacheTime.toString() },
       { key: 'new_badge_days', value: newBadgeDays.toString() },
       { key: 'whatsapp_enabled', value: whatsappEnabled.toString() },
       { key: 'whatsapp_number', value: whatsappNumber.toString() },
@@ -213,6 +227,8 @@ function getConfigDescription(key: string): string {
     'max_stock_alert': 'Cantidad máxima de stock para alertas',
     'enable_cache': 'Habilitar cache para mejorar rendimiento',
     'cache_time': 'Tiempo de cache en minutos',
+    'prices_cache_time': 'Tiempo de cache para precios en minutos',
+    'categories_cache_time': 'Tiempo de cache para categorías en minutos',
     'new_badge_days': 'Días mínimos para mostrar badge "Nuevo" en productos'
   }
   return descriptions[key] || 'Configuración del sistema'

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense, useCallback, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { Header } from '@/components/layouts/header'
@@ -10,9 +10,10 @@ import { ProductCard } from '@/components/products/product-card'
 import { Product } from '@/types/product'
 import { useUserPricing } from '@/hooks/use-user-pricing'
 import { AdvancedFilters } from '@/components/catalog/advanced-filters'
-import { ActiveFilters } from '@/components/catalog/active-filters'
+import { ProductSkeletonGrid } from '@/components/catalog/product-card-skeleton'
 import { Breadcrumbs } from '@/components/catalog/breadcrumbs'
 import { generateCatalogUrl, navigateToCatalog, parseFiltersFromUrl } from '@/lib/utils/url-helpers'
+import { useProductsQuery, usePrefetchProducts } from '@/hooks/use-products-query'
 
 // Interfaces y tipos ahora están en /types/product.ts
 
@@ -22,9 +23,6 @@ function CatalogContent() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
@@ -32,16 +30,10 @@ function CatalogContent() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [showFilters, setShowFilters] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [totalProducts, setTotalProducts] = useState(0)
-  const [hasNextPage, setHasNextPage] = useState(false)
-  const [hasPrevPage, setHasPrevPage] = useState(false)
   const [sortBy, setSortBy] = useState('alphabetical')
   const [sortOrder, setSortOrder] = useState('asc')
-  const [hasOffersAvailable, setHasOffersAvailable] = useState(false)
-  const [itemsPerPage, setItemsPerPage] = useState(16)
-  const [pricingConfig, setPricingConfig] = useState<{priceMultiplier: number, associateDiscount: number, vatRate: number} | null>(null)
-  const [filterCounts, setFilterCounts] = useState<{categories: Array<{name: string, count: number}>, brands: Array<{name: string, count: number}>} | null>(null)
+  const [itemsPerPage, setItemsPerPage] = useState(15)
+  const prefetchProducts = usePrefetchProducts()
   
   // Estados para filtros avanzados
   const [advancedFilters, setAdvancedFilters] = useState({
@@ -55,12 +47,66 @@ function CatalogContent() {
     categories: [] as string[]
   })
 
+  // Construir filtros para React Query
+  const queryFilters = useMemo(() => ({
+    category: selectedCategory || undefined,
+    categories: selectedCategories.length > 0 ? selectedCategories : undefined,
+    brands: selectedBrands.length > 0 ? selectedBrands : undefined,
+    search: searchTerm || undefined,
+    page: currentPage,
+    limit: itemsPerPage,
+    sortBy,
+    sortOrder,
+    // Advanced filters
+    priceMin: advancedFilters.priceRange[0] > 0 ? advancedFilters.priceRange[0] : undefined,
+    priceMax: advancedFilters.priceRange[1] < 500 ? advancedFilters.priceRange[1] : undefined,
+    heightMin: advancedFilters.heightRange[0] > 0 ? advancedFilters.heightRange[0] : undefined,
+    heightMax: advancedFilters.heightRange[1] < 200 ? advancedFilters.heightRange[1] : undefined,
+    widthMin: advancedFilters.widthRange[0] > 0 ? advancedFilters.widthRange[0] : undefined,
+    widthMax: advancedFilters.widthRange[1] < 100 ? advancedFilters.widthRange[1] : undefined,
+    inStock: advancedFilters.inStock || undefined,
+    location: advancedFilters.location.length > 0 ? advancedFilters.location : undefined,
+    plantingSystem: advancedFilters.plantingSystem.length > 0 ? advancedFilters.plantingSystem : undefined,
+    colors: advancedFilters.colors.length > 0 ? advancedFilters.colors : undefined,
+    advancedCategories: advancedFilters.categories.length > 0 ? advancedFilters.categories : undefined,
+  }), [selectedCategory, selectedCategories, selectedBrands, searchTerm, currentPage, itemsPerPage, sortBy, sortOrder, advancedFilters])
+
+  // Usar React Query para obtener productos
+  const { 
+    data: productsData, 
+    isLoading: loading, 
+    error, 
+    isFetching,
+    isPlaceholderData: isPreviousData 
+  } = useProductsQuery(queryFilters)
+
+  // Extraer datos de la respuesta
+  const products = productsData?.data || []
+  const pagination = productsData?.pagination || {
+    page: 1,
+    limit: 16,
+    total: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPrevPage: false
+  }
+  const pricingConfig = productsData?.config || null
+  const filterCounts = productsData?.filters || null
+  const totalPages = pagination.totalPages
+  const totalProducts = pagination.total
+  const hasNextPage = pagination.hasNextPage
+  const hasPrevPage = pagination.hasPrevPage
+  const hasOffersAvailable = products.some((product: Product) => (product as any).isOffer === true)
+
   // Estado para controlar si es la primera carga
   const [isInitialLoad, setIsInitialLoad] = useState(true)
+  
+  // Estado para controlar si ya se cargaron los filtros desde URL
+  const [urlFiltersLoaded, setUrlFiltersLoaded] = useState(false)
 
   // Actualizar rangos cuando lleguen los productos (solo en la primera carga)
   useEffect(() => {
-    if (products.length > 0 && isInitialLoad) {
+    if (products.length > 0 && isInitialLoad && urlFiltersLoaded) {
       const priceMin = Math.floor(Math.min(...products.map(p => p.basePrice * (pricingConfig?.priceMultiplier || 2.5))))
       const priceMax = Math.ceil(Math.max(...products.map(p => p.basePrice * (pricingConfig?.priceMultiplier || 2.5))))
       const heightMin = Math.floor(Math.min(...products.map(p => p.specifications?.height || 0)))
@@ -81,228 +127,216 @@ function CatalogContent() {
         setIsInitialLoad(false)
       }, 100)
     }
-  }, [products, pricingConfig, isInitialLoad])
+  }, [products, pricingConfig, isInitialLoad, urlFiltersLoaded])
 
-  // Single useEffect to handle all filter changes
-  useEffect(() => {
-    // Skip if it's the initial load with range calculation
-    if (isInitialLoad) {
-      return
-    }
-
-    const delayDebounce = setTimeout(() => {
-      setCurrentPage(1)
-      fetchProducts(1, true)
-    }, 300) // Debounce to avoid too many requests
-
-    return () => clearTimeout(delayDebounce)
-  }, [advancedFilters, selectedCategories, selectedBrands, searchTerm, sortBy, sortOrder, isInitialLoad])
-
-  // Read URL parameters on page load
+  // Read URL parameters on page load - SOLO UNA VEZ
   useEffect(() => {
     const filters = parseFiltersFromUrl(pathname, searchParams)
     setSelectedCategories(filters.categories)
     setSelectedBrands(filters.brands)
     setSearchTerm(filters.search)
+    setCurrentPage(filters.page)
+    setSortBy(filters.sortBy)
+    setSortOrder(filters.sortOrder)
+    setItemsPerPage(filters.itemsPerPage)
     
-    fetchProducts(1, true)
-  }, [pathname, searchParams])
+    // Cargar filtros avanzados desde URL
+    setAdvancedFilters({
+      priceRange: filters.priceRange,
+      heightRange: filters.heightRange,
+      widthRange: filters.widthRange,
+      inStock: filters.inStock,
+      location: filters.location,
+      plantingSystem: filters.plantingSystem,
+      colors: filters.colors,
+      categories: filters.advancedCategories
+    })
+    
+    setUrlFiltersLoaded(true)
+  }, []) // Sin dependencias para que solo se ejecute una vez
+
+  // Update URL when filters change
+  useEffect(() => {
+    if (urlFiltersLoaded && !isInitialLoad) {
+      const updateUrl = async () => {
+        const url = await generateCatalogUrl({
+          brands: selectedBrands,
+          categories: selectedCategories,
+          search: searchTerm,
+          page: currentPage,
+          sortBy,
+          sortOrder,
+          itemsPerPage,
+          // Filtros avanzados
+          priceRange: advancedFilters.priceRange,
+          heightRange: advancedFilters.heightRange,
+          widthRange: advancedFilters.widthRange,
+          inStock: advancedFilters.inStock,
+          location: advancedFilters.location,
+          plantingSystem: advancedFilters.plantingSystem,
+          colors: advancedFilters.colors,
+          advancedCategories: advancedFilters.categories
+        })
+        router.replace(url)
+      }
+      updateUrl()
+    }
+  }, [selectedCategories, selectedBrands, searchTerm, currentPage, sortBy, sortOrder, itemsPerPage, advancedFilters, urlFiltersLoaded, isInitialLoad, router])
+
+  // Prefetch next page for better UX
+  useEffect(() => {
+    if (hasNextPage && !isFetching) {
+      prefetchProducts({
+        ...queryFilters,
+        page: currentPage + 1
+      })
+    }
+  }, [hasNextPage, isFetching, currentPage, queryFilters, prefetchProducts])
   
-  const filteredProducts = products.filter(product => product.active)
+  const filteredProducts = useMemo(() => 
+    products.filter((product: Product) => product.active),
+    [products]
+  )
   
-  const handleAddToCart = (product: Product) => {
+  const handleAddToCart = useCallback((product: Product) => {
     // TODO: Implementar lógica del carrito
     console.log('Agregar al carrito:', product.name)
     alert(`Producto "${product.name}" agregado al carrito (funcionalidad pendiente)`)
-  }
+  }, [])
 
   // Navegar a URL amigable
-  const navigateToFilters = async () => {
+  const navigateToFilters = useCallback(async () => {
     await navigateToCatalog(router, {
       brands: selectedBrands,
       categories: selectedCategories,
       search: searchTerm
     })
-  }
+  }, [router, selectedBrands, selectedCategories, searchTerm])
 
-  // Funciones para manejar filtros activos
-  const handleRemoveSearch = async () => {
-    setSearchTerm('')
-    setCurrentPage(1)
-    
-    // Navegar con filtros actualizados
-    const url = await generateCatalogUrl({
-      brands: selectedBrands,
-      categories: selectedCategories,
-      search: ''
-    })
-    router.push(url)
-  }
-
-  const handleRemoveCategory = async (category: string) => {
-    const newCategories = selectedCategories.filter(c => c !== category)
-    setSelectedCategories(newCategories)
-    setCurrentPage(1)
-    
-    // Navegar con filtros actualizados
-    const url = await generateCatalogUrl({
-      brands: selectedBrands,
-      categories: newCategories,
-      search: searchTerm
-    })
-    router.push(url)
-  }
-
-  const handleRemoveBrand = async (brand: string) => {
-    const newBrands = selectedBrands.filter(b => b !== brand)
-    setSelectedBrands(newBrands)
-    setCurrentPage(1)
-    
-    // Navegar con filtros actualizados
-    const url = await generateCatalogUrl({
-      brands: newBrands,
-      categories: selectedCategories,
-      search: searchTerm
-    })
-    router.push(url)
-  }
-
-  const handleClearAllFilters = async () => {
+  // Función para limpiar todos los filtros
+  const handleClearAllFilters = useCallback(async () => {
     setSearchTerm('')
     setSelectedCategories([])
     setSelectedBrands([])
     setCurrentPage(1)
+    setSortBy('alphabetical')
+    setSortOrder('asc')
+    setItemsPerPage(15)
+    
+    // Resetear filtros avanzados
+    setAdvancedFilters({
+      priceRange: [0, 500],
+      heightRange: [0, 200],
+      widthRange: [0, 100],
+      inStock: false,
+      location: [],
+      plantingSystem: [],
+      colors: [],
+      categories: []
+    })
     
     // Navegar a la URL base del catálogo
     router.push('/catalogo')
-  }
+  }, [router])
 
-  const fetchProducts = async (page = 1, resetProducts = false) => {
-    try {
-      // Validate input parameters
-      const pageNum = Number(page)
-      const limitNum = Number(itemsPerPage)
-      
-      if (isNaN(pageNum) || pageNum < 1) {
-        console.error('❌ Invalid page parameter in fetchProducts:', page)
-        return
-      }
-      
-      if (isNaN(limitNum) || limitNum < 1) {
-        console.error('❌ Invalid limit parameter in fetchProducts:', itemsPerPage)
-        return
-      }
-      
-      setLoading(true)
-      const params = new URLSearchParams({
-        page: pageNum.toString(),
-        limit: limitNum.toString(),
-        ...(selectedCategory && { category: selectedCategory.toString() }),
-        ...(selectedCategories.length > 0 && { categories: selectedCategories.join(',') }),
-        ...(selectedBrands.length > 0 && { brands: selectedBrands.join(',') }),
-        ...(searchTerm && { search: searchTerm.toString() }),
-        sortBy: sortBy.toString(),
-        sortOrder: sortOrder.toString()
-      })
+  // Callbacks para eventos del UI
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value)
+  }, [])
 
-      // Agregar filtros avanzados
-      if (advancedFilters.priceRange[0] > 0 || advancedFilters.priceRange[1] < 500) {
-        params.append('priceMin', advancedFilters.priceRange[0].toString())
-        params.append('priceMax', advancedFilters.priceRange[1].toString())
-      }
-      
-      if (advancedFilters.heightRange[0] > 0 || advancedFilters.heightRange[1] < 200) {
-        params.append('heightMin', advancedFilters.heightRange[0].toString())
-        params.append('heightMax', advancedFilters.heightRange[1].toString())
-      }
-      
-      if (advancedFilters.widthRange[0] > 0 || advancedFilters.widthRange[1] < 100) {
-        params.append('widthMin', advancedFilters.widthRange[0].toString())
-        params.append('widthMax', advancedFilters.widthRange[1].toString())
-      }
-      
-      if (advancedFilters.inStock) {
-        params.append('inStock', 'true')
-      }
-      
-      if (advancedFilters.location.length > 0) {
-        params.append('location', advancedFilters.location.join(','))
-      }
-      
-      if (advancedFilters.plantingSystem.length > 0) {
-        params.append('plantingSystem', advancedFilters.plantingSystem.join(','))
-      }
-      
-      if (advancedFilters.colors.length > 0) {
-        params.append('colors', advancedFilters.colors.join(','))
-      }
-      
-      if (advancedFilters.categories.length > 0) {
-        params.append('advancedCategories', advancedFilters.categories.join(','))
-      }
-      
-      const finalUrl = `/api/products?${params}`
-      const response = await fetch(finalUrl)
-      if (!response.ok) {
-        throw new Error('Error al cargar productos')
-      }
-      const data = await response.json()
-      
-      if (resetProducts || page === 1) {
-        setProducts(data.data || [])
-      } else {
-        setProducts(prev => [...prev, ...(data.data || [])])
-      }
-      
-      setCurrentPage(data.pagination.page)
-      setTotalPages(data.pagination.totalPages)
-      setTotalProducts(data.pagination.total)
-      setHasNextPage(data.pagination.hasNextPage)
-      setHasPrevPage(data.pagination.hasPrevPage)
-      
-      // Guardar configuración de precios
-      if (data.config) {
-        setPricingConfig(data.config)
-      }
-      
-      // Actualizar conteos de filtros
-      if (data.filters) {
-        setFilterCounts(data.filters)
-      }
-      
-      // Verificar si hay productos en oferta
-      const hasOffers = data.data.some((product: any) => product.isOffer === true)
-      setHasOffersAvailable(hasOffers)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const handleItemsPerPageChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setItemsPerPage(Number(e.target.value))
+    setCurrentPage(1)
+  }, [])
 
-  if (loading) {
+  const handleSortByChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSortBy(e.target.value)
+  }, [])
+
+  const handleSortOrderChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSortOrder(e.target.value)
+  }, [])
+
+  const handleToggleFilters = useCallback(() => {
+    setShowFilters(!showFilters)
+  }, [showFilters])
+
+  const handleToggleViewMode = useCallback(() => {
+    setViewMode(viewMode === 'grid' ? 'list' : 'grid')
+  }, [viewMode])
+
+  const handlePrevPage = useCallback(() => {
+    const prevPage = currentPage - 1
+    setCurrentPage(prevPage)
+  }, [currentPage])
+
+  const handleNextPage = useCallback(() => {
+    const nextPage = currentPage + 1
+    setCurrentPage(nextPage)
+  }, [currentPage])
+
+  const handlePageClick = useCallback((pageNumber: number) => {
+    setCurrentPage(pageNumber)
+  }, [])
+
+  // Ya no necesitamos fetchProducts - React Query se encarga de todo
+
+  // Solo mostrar loading completo si no hay datos previos y está cargando
+  if (loading && !products.length && !error) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="container mx-auto px-4 py-8">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#183a1d] mx-auto mb-4"></div>
-            <p className="text-gray-600">Cargando productos...</p>
+          <div className="flex flex-col lg:flex-row gap-8">
+            {/* Sidebar skeleton */}
+            <div className="lg:w-80">
+              <div className="space-y-6 sticky top-4">
+                <div className="bg-white rounded-lg shadow-md p-4 animate-pulse">
+                  <div className="h-4 bg-gray-200 rounded w-32 mb-2"></div>
+                  <div className="h-10 bg-gray-200 rounded"></div>
+                </div>
+                <div className="bg-white rounded-lg shadow-md p-4 animate-pulse">
+                  <div className="h-4 bg-gray-200 rounded w-24 mb-4"></div>
+                  <div className="space-y-2">
+                    <div className="h-8 bg-gray-200 rounded"></div>
+                    <div className="h-8 bg-gray-200 rounded"></div>
+                    <div className="h-8 bg-gray-200 rounded"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Main content skeleton */}
+            <div className="flex-1">
+              <div className="flex justify-between items-center mb-6">
+                <div className="animate-pulse">
+                  <div className="h-8 bg-gray-200 rounded w-48 mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-32"></div>
+                </div>
+                <div className="flex gap-2">
+                  <div className="w-32 h-10 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="w-32 h-10 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="w-20 h-10 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              </div>
+              
+              <ProductSkeletonGrid count={itemsPerPage} viewMode={viewMode} />
+            </div>
           </div>
         </div>
       </div>
     )
   }
 
-  if (error) {
+  if (error && !isPreviousData) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
-            <p className="text-red-600 mb-4">Error: {error}</p>
+            <p className="text-red-600 mb-4">Error: {error instanceof Error ? error.message : 'Error desconocido'}</p>
             <button
-              onClick={() => fetchProducts(1, true)}
+              onClick={() => window.location.reload()}
               className="bg-[#183a1d] text-white px-6 py-2 rounded-lg hover:bg-[#2a5530] transition-colors"
             >
               Intentar nuevamente
@@ -333,7 +367,7 @@ function CatalogContent() {
                     type="text"
                     placeholder="Buscar..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={handleSearchChange}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#183a1d] focus:border-transparent"
                   />
                 </div>
@@ -365,15 +399,131 @@ function CatalogContent() {
             />
             
             {/* Filtros activos */}
-            <ActiveFilters
-              searchTerm={searchTerm}
-              selectedCategories={selectedCategories}
-              selectedBrands={selectedBrands}
-              onRemoveSearch={handleRemoveSearch}
-              onRemoveCategory={handleRemoveCategory}
-              onRemoveBrand={handleRemoveBrand}
-              onClearAll={handleClearAllFilters}
-            />
+            {(selectedCategories.length > 0 || selectedBrands.length > 0 || searchTerm || 
+              advancedFilters.categories.length > 0 || advancedFilters.location.length > 0 || 
+              advancedFilters.colors.length > 0 || advancedFilters.plantingSystem.length > 0 || 
+              advancedFilters.inStock || advancedFilters.priceRange[0] > 0 || advancedFilters.priceRange[1] < 500) && (
+              <div className="mb-4 p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="text-gray-600 font-medium">Filtros activos:</span>
+                  
+                  {selectedCategories.map((category) => (
+                    <span key={category} className="inline-flex items-center gap-1 bg-[#183a1d] text-white px-2 py-1 rounded-full text-xs">
+                      📂 {category}
+                      <button
+                        onClick={() => setSelectedCategories(prev => prev.filter(c => c !== category))}
+                        className="ml-1 hover:bg-white/20 rounded-full p-0.5 transition-colors"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  
+                  {advancedFilters.categories.map((category) => (
+                    <span key={category} className="inline-flex items-center gap-1 bg-[#183a1d] text-white px-2 py-1 rounded-full text-xs">
+                      📂 {category}
+                      <button
+                        onClick={() => setAdvancedFilters(prev => ({ ...prev, categories: prev.categories.filter(c => c !== category) }))}
+                        className="ml-1 hover:bg-white/20 rounded-full p-0.5 transition-colors"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  
+                  {selectedBrands.map((brand) => (
+                    <span key={brand} className="inline-flex items-center gap-1 bg-[#f0a04b] text-white px-2 py-1 rounded-full text-xs">
+                      🏷️ {brand}
+                      <button
+                        onClick={() => setSelectedBrands(prev => prev.filter(b => b !== brand))}
+                        className="ml-1 hover:bg-white/20 rounded-full p-0.5 transition-colors"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  
+                  {advancedFilters.location.map((location) => (
+                    <span key={location} className="inline-flex items-center gap-1 bg-green-500 text-white px-2 py-1 rounded-full text-xs">
+                      📍 {location}
+                      <button
+                        onClick={() => setAdvancedFilters(prev => ({ ...prev, location: prev.location.filter(l => l !== location) }))}
+                        className="ml-1 hover:bg-white/20 rounded-full p-0.5 transition-colors"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  
+                  {advancedFilters.colors.map((color) => (
+                    <span key={color} className="inline-flex items-center gap-1 bg-purple-500 text-white px-2 py-1 rounded-full text-xs">
+                      🎨 {color}
+                      <button
+                        onClick={() => setAdvancedFilters(prev => ({ ...prev, colors: prev.colors.filter(c => c !== color) }))}
+                        className="ml-1 hover:bg-white/20 rounded-full p-0.5 transition-colors"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  
+                  {advancedFilters.plantingSystem.map((system) => (
+                    <span key={system} className="inline-flex items-center gap-1 bg-teal-500 text-white px-2 py-1 rounded-full text-xs">
+                      🌱 {system}
+                      <button
+                        onClick={() => setAdvancedFilters(prev => ({ ...prev, plantingSystem: prev.plantingSystem.filter(s => s !== system) }))}
+                        className="ml-1 hover:bg-white/20 rounded-full p-0.5 transition-colors"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  
+                  {advancedFilters.inStock && (
+                    <span className="inline-flex items-center gap-1 bg-emerald-500 text-white px-2 py-1 rounded-full text-xs">
+                      ✅ En stock
+                      <button
+                        onClick={() => setAdvancedFilters(prev => ({ ...prev, inStock: false }))}
+                        className="ml-1 hover:bg-white/20 rounded-full p-0.5 transition-colors"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  )}
+                  
+                  {(advancedFilters.priceRange[0] > 0 || advancedFilters.priceRange[1] < 500) && (
+                    <span className="inline-flex items-center gap-1 bg-amber-500 text-white px-2 py-1 rounded-full text-xs">
+                      💰 €{advancedFilters.priceRange[0]} - €{advancedFilters.priceRange[1]}
+                      <button
+                        onClick={() => setAdvancedFilters(prev => ({ ...prev, priceRange: [0, 500] }))}
+                        className="ml-1 hover:bg-white/20 rounded-full p-0.5 transition-colors"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  )}
+                  
+                  {searchTerm && (
+                    <span className="inline-flex items-center gap-1 bg-blue-500 text-white px-2 py-1 rounded-full text-xs">
+                      🔍 "{searchTerm}"
+                      <button
+                        onClick={() => setSearchTerm('')}
+                        className="ml-1 hover:bg-white/20 rounded-full p-0.5 transition-colors"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  )}
+                  
+                  <button
+                    onClick={handleClearAllFilters}
+                    className="ml-2 text-gray-500 hover:text-red-500 transition-colors text-xs underline"
+                  >
+                    Limpiar todos
+                  </button>
+                </div>
+              </div>
+            )}
             
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
               <div>
@@ -387,15 +537,11 @@ function CatalogContent() {
                 {/* Selector de productos por página */}
                 <select
                   value={itemsPerPage}
-                  onChange={(e) => {
-                    setItemsPerPage(Number(e.target.value))
-                    setCurrentPage(1)
-                    fetchProducts(1, true)
-                  }}
+                  onChange={handleItemsPerPageChange}
                   className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#183a1d] focus:border-transparent bg-white text-sm"
                 >
                   <option value="12">12 por página</option>
-                  <option value="16">16 por página</option>
+                  <option value="15">15 por página</option>
                   <option value="24">24 por página</option>
                   <option value="36">36 por página</option>
                 </select>
@@ -403,7 +549,7 @@ function CatalogContent() {
                 {/* Selector de ordenamiento */}
                 <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
+                  onChange={handleSortByChange}
                   className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#183a1d] focus:border-transparent bg-white text-sm"
                 >
                   {hasOffersAvailable && <option value="offer">En oferta</option>}
@@ -415,7 +561,7 @@ function CatalogContent() {
                 {/* Selector de orden */}
                 <select
                   value={sortOrder}
-                  onChange={(e) => setSortOrder(e.target.value)}
+                  onChange={handleSortOrderChange}
                   className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#183a1d] focus:border-transparent bg-white text-sm"
                   disabled={sortBy === 'offer'}
                 >
@@ -424,7 +570,7 @@ function CatalogContent() {
                 </select>
                 
                 <button
-                  onClick={() => setShowFilters(!showFilters)}
+                  onClick={handleToggleFilters}
                   className="lg:hidden bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
                 >
                   <Filter size={16} />
@@ -432,7 +578,7 @@ function CatalogContent() {
                 </button>
                 
                 <button
-                  onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+                  onClick={handleToggleViewMode}
                   className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
                 >
                   {viewMode === 'grid' ? <List size={16} /> : <Grid size={16} />}
@@ -441,11 +587,9 @@ function CatalogContent() {
               </div>
             </div>
             
-            {loading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#183a1d] mx-auto mb-4"></div>
-                <p className="text-gray-600">Cargando productos...</p>
-              </div>
+            {/* Contenido principal con skeleton loading */}
+            {(loading && !isPreviousData && !products.length) ? (
+              <ProductSkeletonGrid count={itemsPerPage} viewMode={viewMode} />
             ) : filteredProducts.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-gray-600 text-lg">No se encontraron productos</p>
@@ -453,11 +597,21 @@ function CatalogContent() {
               </div>
             ) : (
               <>
+                {/* Indicador de carga durante actualización */}
+                {(isFetching && isPreviousData) && (
+                  <div className="mb-4 text-center">
+                    <div className="inline-flex items-center gap-2 text-[#183a1d] bg-[#183a1d]/5 px-4 py-2 rounded-full">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#183a1d]"></div>
+                      <span className="text-sm font-medium">Actualizando resultados...</span>
+                    </div>
+                  </div>
+                )}
+                
                 <div className={`${viewMode === 'grid' 
                   ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
-                  : 'space-y-4'} ${loading ? 'opacity-50 pointer-events-none' : ''}`
+                  : 'space-y-4'} ${(isFetching && isPreviousData) ? 'opacity-75' : ''}`
                 }>
-                  {filteredProducts.map((product, index) => (
+                  {filteredProducts.map((product: Product, index: number) => (
                     <ProductCard
                       key={product.id}
                       product={product}
@@ -473,11 +627,7 @@ function CatalogContent() {
                 {/* Paginación */}
                 <div className="flex justify-center items-center mt-8 space-x-2">
                   <button
-                    onClick={() => { 
-                      const prevPage = currentPage - 1;
-                      setCurrentPage(prevPage); 
-                      fetchProducts(prevPage, true);
-                    }}
+                    onClick={handlePrevPage}
                     disabled={!hasPrevPage || loading}
                     className="px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -492,10 +642,7 @@ function CatalogContent() {
                       return (
                         <button
                           key={pageNumber}
-                          onClick={() => { 
-                            setCurrentPage(pageNumber); 
-                            fetchProducts(pageNumber, true);
-                          }}
+                          onClick={() => handlePageClick(pageNumber)}
                           disabled={loading}
                           className={`px-3 py-2 text-sm font-medium rounded-lg ${
                             pageNumber === currentPage
@@ -510,11 +657,7 @@ function CatalogContent() {
                   </div>
                   
                   <button
-                    onClick={() => { 
-                      const nextPage = currentPage + 1;
-                      setCurrentPage(nextPage); 
-                      fetchProducts(nextPage, true);
-                    }}
+                    onClick={handleNextPage}
                     disabled={!hasNextPage || loading}
                     className="px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
