@@ -52,7 +52,7 @@ export default function BackupPage() {
   const [backupInfo, setBackupInfo] = useState<BackupInfo>({
     lastBackup: null,
     size: 'Calculando...',
-    version: '1.0'
+    version: 'Cargando...'
   })
   
   // Configuración de ajustes disponibles
@@ -172,9 +172,30 @@ export default function BackupPage() {
     }
   }
 
+  // Cargar versión del sistema dinámicamente
+  const loadSystemVersion = async () => {
+    try {
+      const response = await fetch('/api/admin/system-version')
+      if (response.ok) {
+        const data = await response.json()
+        setBackupInfo(prev => ({
+          ...prev,
+          version: data.version
+        }))
+      }
+    } catch (error) {
+      console.error('Error cargando versión del sistema:', error)
+      setBackupInfo(prev => ({
+        ...prev,
+        version: 'Error'
+      }))
+    }
+  }
+
   // Cargar configuración inicial y preferencias guardadas
   useEffect(() => {
     loadDatabaseStats()
+    loadSystemVersion()
     
     const loadPreferences = async () => {
       try {

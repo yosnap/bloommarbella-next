@@ -66,9 +66,22 @@ export async function POST() {
       prisma.blogPost.findMany()
     ])
 
+    // Obtener versión del sistema dinámicamente
+    let systemVersion = '1.0.1' // Versión por defecto
+    try {
+      const versionConfig = await prisma.configuration.findUnique({
+        where: { key: 'system_version' }
+      })
+      if (versionConfig && versionConfig.value) {
+        systemVersion = versionConfig.value as string
+      }
+    } catch (error) {
+      console.warn('No se pudo obtener versión del sistema, usando versión por defecto:', error)
+    }
+
     // Crear objeto de backup
     const backup = {
-      version: '1.0',
+      version: systemVersion,
       timestamp: new Date().toISOString(),
       collections: {
         products: {

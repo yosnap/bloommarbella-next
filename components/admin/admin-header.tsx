@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Home, Settings } from 'lucide-react'
+import { ArrowLeft, Home, Settings, Info } from 'lucide-react'
 
 export function AdminHeader() {
   const router = useRouter()
@@ -29,6 +29,13 @@ export function AdminHeader() {
             >
               <Home size={18} />
               <span>Inicio</span>
+            </button>
+            <button
+              onClick={() => router.push('/admin/sistema')}
+              className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <Info size={18} />
+              <span>Sistema</span>
             </button>
             <button
               onClick={() => router.push('/')}

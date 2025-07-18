@@ -85,8 +85,34 @@ export default function SincronizacionPage() {
     }
   }
 
+  const getDefaultSchedule = () => ({
+    enabled: false,
+    interval: 'daily',
+    time: '02:00',
+    dayOfWeek: 1,
+    dayOfMonth: 1,
+    customCron: ''
+  })
+
+  const getDefaultBatchSettings = () => ({
+    batchSize: 500,
+    pauseBetweenBatches: 1000,
+    maxConcurrentRequests: 5,
+    enableProgressLogging: false
+  })
+
   const saveConfig = async (configType: string, value: any) => {
     setSaving(true)
+    
+    // Validar que value no sea null/undefined y tenga contenido válido
+    if (!value || typeof value !== 'object') {
+      console.warn('saveConfig: valor inválido', { configType, value })
+      setSaving(false)
+      return
+    }
+    
+    console.log('Enviando configuración:', { configType, value })
+    
     try {
       const response = await fetch('/api/admin/sync-config', {
         method: 'POST',
@@ -299,7 +325,7 @@ export default function SincronizacionPage() {
                   id="sync-enabled"
                   checked={config?.sync_schedule?.enabled || false}
                   onCheckedChange={(checked) => {
-                    const newConfig = { ...config.sync_schedule, enabled: checked }
+                    const newConfig = { ...getDefaultSchedule(), ...config.sync_schedule, enabled: checked }
                     setConfig(prev => ({ ...prev!, sync_schedule: newConfig }))
                     saveConfig('sync_schedule', newConfig)
                   }}
@@ -313,7 +339,7 @@ export default function SincronizacionPage() {
                   <Select
                     value={config?.sync_schedule?.interval || 'daily'}
                     onValueChange={(value) => {
-                      const newConfig = { ...config.sync_schedule, interval: value }
+                      const newConfig = { ...getDefaultSchedule(), ...config.sync_schedule, interval: value }
                       setConfig(prev => ({ ...prev!, sync_schedule: newConfig }))
                       saveConfig('sync_schedule', newConfig)
                     }}
@@ -339,7 +365,7 @@ export default function SincronizacionPage() {
                       type="time"
                       value={config?.sync_schedule?.time || '00:00'}
                       onChange={(e) => {
-                        const newConfig = { ...config.sync_schedule, time: e.target.value }
+                        const newConfig = { ...getDefaultSchedule(), ...config.sync_schedule, time: e.target.value }
                         setConfig(prev => ({ ...prev!, sync_schedule: newConfig }))
                         saveConfig('sync_schedule', newConfig)
                       }}
@@ -353,7 +379,7 @@ export default function SincronizacionPage() {
                     <Select
                       value={config?.sync_schedule?.dayOfWeek?.toString() || '0'}
                       onValueChange={(value) => {
-                        const newConfig = { ...config.sync_schedule, dayOfWeek: parseInt(value) }
+                        const newConfig = { ...getDefaultSchedule(), ...config.sync_schedule, dayOfWeek: parseInt(value) }
                         setConfig(prev => ({ ...prev!, sync_schedule: newConfig }))
                         saveConfig('sync_schedule', newConfig)
                       }}
@@ -382,7 +408,7 @@ export default function SincronizacionPage() {
                       placeholder="0 */6 * * * (cada 6 horas)"
                       value={config?.sync_schedule?.customCron || ''}
                       onChange={(e) => {
-                        const newConfig = { ...config.sync_schedule, customCron: e.target.value }
+                        const newConfig = { ...getDefaultSchedule(), ...config.sync_schedule, customCron: e.target.value }
                         setConfig(prev => ({ ...prev!, sync_schedule: newConfig }))
                         saveConfig('sync_schedule', newConfig)
                       }}
@@ -412,7 +438,7 @@ export default function SincronizacionPage() {
                   max="5000"
                   value={config?.sync_batch_settings?.batchSize || 100}
                   onChange={(e) => {
-                    const newConfig = { ...config.sync_batch_settings, batchSize: parseInt(e.target.value) }
+                    const newConfig = { ...getDefaultBatchSettings(), ...config.sync_batch_settings, batchSize: parseInt(e.target.value) }
                     setConfig(prev => ({ ...prev!, sync_batch_settings: newConfig }))
                     saveConfig('sync_batch_settings', newConfig)
                   }}
@@ -431,7 +457,7 @@ export default function SincronizacionPage() {
                   max="10000"
                   value={config?.sync_batch_settings?.pauseBetweenBatches || 1000}
                   onChange={(e) => {
-                    const newConfig = { ...config.sync_batch_settings, pauseBetweenBatches: parseInt(e.target.value) }
+                    const newConfig = { ...getDefaultBatchSettings(), ...config.sync_batch_settings, pauseBetweenBatches: parseInt(e.target.value) }
                     setConfig(prev => ({ ...prev!, sync_batch_settings: newConfig }))
                     saveConfig('sync_batch_settings', newConfig)
                   }}
@@ -450,7 +476,7 @@ export default function SincronizacionPage() {
                   max="20"
                   value={config?.sync_batch_settings?.maxConcurrentRequests || 5}
                   onChange={(e) => {
-                    const newConfig = { ...config.sync_batch_settings, maxConcurrentRequests: parseInt(e.target.value) }
+                    const newConfig = { ...getDefaultBatchSettings(), ...config.sync_batch_settings, maxConcurrentRequests: parseInt(e.target.value) }
                     setConfig(prev => ({ ...prev!, sync_batch_settings: newConfig }))
                     saveConfig('sync_batch_settings', newConfig)
                   }}
@@ -465,7 +491,7 @@ export default function SincronizacionPage() {
                   id="enableProgressLogging"
                   checked={config?.sync_batch_settings?.enableProgressLogging || false}
                   onCheckedChange={(checked) => {
-                    const newConfig = { ...config.sync_batch_settings, enableProgressLogging: checked }
+                    const newConfig = { ...getDefaultBatchSettings(), ...config.sync_batch_settings, enableProgressLogging: checked }
                     setConfig(prev => ({ ...prev!, sync_batch_settings: newConfig }))
                     saveConfig('sync_batch_settings', newConfig)
                   }}
