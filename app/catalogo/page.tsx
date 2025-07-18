@@ -97,18 +97,6 @@ function CatalogContent() {
   const hasNextPage = pagination.hasNextPage
   const hasPrevPage = pagination.hasPrevPage
   
-  // Debug logging
-  console.log('🔍 Pagination debug:', {
-    currentPage,
-    totalPages,
-    totalProducts,
-    hasNextPage,
-    hasPrevPage,
-    paginationFromAPI: productsData?.pagination,
-    isLoading: loading,
-    isFetching,
-    isPreviousData
-  })
   const hasOffersAvailable = products.some((product: Product) => (product as any).isOffer === true)
 
   // Calcular rangos dinámicos basados en productos actuales
@@ -134,6 +122,22 @@ function CatalogContent() {
       widthRange: { min: widthMin, max: widthMax }
     }
   }, [products, pricingConfig])
+
+  // Debug logging
+  console.log('🔍 Pagination debug:', {
+    currentPage,
+    totalPages,
+    totalProducts,
+    hasNextPage,
+    hasPrevPage,
+    paginationFromAPI: productsData?.pagination,
+    isLoading: loading,
+    isFetching,
+    isPreviousData,
+    dynamicRanges,
+    advancedFilters,
+    productsCount: products.length
+  })
 
   // Estado para controlar si es la primera carga
   const [isInitialLoad, setIsInitialLoad] = useState(true)
