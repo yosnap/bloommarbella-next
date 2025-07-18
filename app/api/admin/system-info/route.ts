@@ -160,7 +160,7 @@ export async function GET() {
       NEXTAUTH_URL: process.env.NEXTAUTH_URL,
       DATABASE_URL: process.env.DATABASE_URL?.replace(/\/\/.*:.*@/, '//***:***@') || 'No configurada',
       NIEUWKOOP_API_URL: process.env.NIEUWKOOP_API_URL || 'No configurada',
-      hasApiKey: !!process.env.NIEUWKOOP_API_KEY,
+      hasApiCredentials: !!(process.env.NIEUWKOOP_API_USER && process.env.NIEUWKOOP_API_PASSWORD),
       hasNextAuthSecret: !!process.env.NEXTAUTH_SECRET
     }
 

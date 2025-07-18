@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { RefreshCw, Server, Database, Package, Settings, Clock, Activity } from 'lucide-react'
-import AdminHeader from '@/components/admin/admin-header'
+import { AdminHeader } from '@/components/admin/admin-header'
 
 interface SystemInfo {
   package: {
@@ -62,7 +62,7 @@ interface SystemInfo {
     NEXTAUTH_URL: string
     DATABASE_URL: string
     NIEUWKOOP_API_URL: string
-    hasApiKey: boolean
+    hasApiCredentials: boolean
     hasNextAuthSecret: boolean
   }
   nextjs: {
@@ -336,9 +336,9 @@ export default function SystemInfoPage() {
                   <p className="text-sm text-gray-500 font-mono">{systemInfo.environment.NIEUWKOOP_API_URL || 'No configurada'}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">API Key de Nieuwkoop</p>
-                  <Badge variant={systemInfo.environment.hasApiKey ? 'default' : 'destructive'}>
-                    {systemInfo.environment.hasApiKey ? 'Configurada' : 'No configurada'}
+                  <p className="text-sm font-medium text-gray-600">Credenciales API Nieuwkoop</p>
+                  <Badge variant={systemInfo.environment.hasApiCredentials ? 'default' : 'destructive'}>
+                    {systemInfo.environment.hasApiCredentials ? 'Configuradas' : 'No configuradas'}
                   </Badge>
                 </div>
                 <div>

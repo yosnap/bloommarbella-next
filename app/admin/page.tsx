@@ -259,7 +259,7 @@ export default function AdminPanel() {
         {/* Acciones Rápidas */}
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Acciones Rápidas</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <button
               onClick={() => router.push('/catalogo')}
               className="flex items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors"
@@ -388,6 +388,19 @@ export default function AdminPanel() {
               <div className="text-left">
                 <p className="font-medium text-gray-900">Backup y Restauración</p>
                 <p className="text-sm text-gray-500">Copias de seguridad del sistema</p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => router.push('/admin/sistema')}
+              className="flex items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <svg className="w-6 h-6 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="text-left">
+                <p className="font-medium text-gray-900">Información del Sistema</p>
+                <p className="text-sm text-gray-500">Versión, dependencias y estado</p>
               </div>
             </button>
           </div>
